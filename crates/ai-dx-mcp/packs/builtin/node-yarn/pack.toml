@@ -1,0 +1,25 @@
+[pack]
+id = "node-yarn"
+version = "0.1.0"
+description = "Node pack (yarn): lockfile-driven defaults for compas init"
+languages = ["javascript", "typescript"]
+
+[[detectors]]
+id = "yarn"
+all_paths = ["package.json"]
+any_paths = ["yarn.lock"]
+none_paths = ["pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "bun.lockb", "bun.lock"]
+
+[[tools]]
+[tools.tool]
+id = "yarn-test"
+description = "Run yarn test"
+command = "yarn"
+args = ["test"]
+
+[canonical_tools]
+test = ["yarn-test"]
+disabled = ["build", "lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]

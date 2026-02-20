@@ -1,0 +1,34 @@
+[pack]
+id = "python"
+version = "0.1.0"
+description = "Python pack: unittest discovery defaults for compas init"
+languages = ["python"]
+
+[[detectors]]
+id = "pyproject"
+any_paths = ["pyproject.toml"]
+none_paths = ["pytest.ini", "tox.ini"]
+
+[[detectors]]
+id = "requirements"
+any_paths = ["requirements.txt"]
+none_paths = ["pytest.ini", "tox.ini"]
+
+[[detectors]]
+id = "setup-py"
+any_paths = ["setup.py"]
+none_paths = ["pytest.ini", "tox.ini"]
+
+[[tools]]
+[tools.tool]
+id = "python-test"
+description = "python -m unittest discover"
+command = "python"
+args = ["-m", "unittest", "discover"]
+
+[canonical_tools]
+test = ["python-test"]
+disabled = ["build", "lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]

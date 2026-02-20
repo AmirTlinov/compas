@@ -1,0 +1,25 @@
+[pack]
+id = "node-pnpm"
+version = "0.1.0"
+description = "Node pack (pnpm): lockfile-driven defaults for compas init"
+languages = ["javascript", "typescript"]
+
+[[detectors]]
+id = "pnpm"
+all_paths = ["package.json"]
+any_paths = ["pnpm-lock.yaml"]
+none_paths = ["yarn.lock", "package-lock.json", "npm-shrinkwrap.json", "bun.lockb", "bun.lock"]
+
+[[tools]]
+[tools.tool]
+id = "pnpm-test"
+description = "Run pnpm test"
+command = "pnpm"
+args = ["test"]
+
+[canonical_tools]
+test = ["pnpm-test"]
+disabled = ["build", "lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]

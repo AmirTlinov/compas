@@ -1,0 +1,12 @@
+catalog = [
+  "policy_theater",
+  "unplugged_iron",
+  "fail_open",
+  "env_sprawl",
+  "public_surface_bloat",
+  "god_module_cycles",
+  "resilience_defaults",
+  "security_baseline",
+  "dependency_hygiene",
+  "knowledge_continuity",
+]

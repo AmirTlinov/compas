@@ -1,0 +1,23 @@
+[pack]
+id = "python-pytest"
+version = "0.1.0"
+description = "Python pack (pytest): pytest config-driven defaults for compas init"
+languages = ["python"]
+
+[[detectors]]
+id = "pytest-config"
+any_paths = ["pytest.ini", "tox.ini"]
+
+[[tools]]
+[tools.tool]
+id = "pytest-test"
+description = "pytest (default)"
+command = "python"
+args = ["-m", "pytest"]
+
+[canonical_tools]
+test = ["pytest-test"]
+disabled = ["build", "lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]

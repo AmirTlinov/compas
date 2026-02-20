@@ -1,0 +1,22 @@
+---
+name: branchmind
+description: "Локальная привязка: для plan->BranchMind sync использовать глобальный skill plan-sync-branchmind."
+Last verified: 2026-02-14
+status: PASS
+---
+
+# Skill: branchmind (global binding)
+
+[LEGEND]
+GLOBAL_SKILL = `/home/amir/.codex/skills/plan-sync-branchmind/SKILL.md`.
+SYNC = Фиксация финального `<proposed_plan>` в BranchMind.
+PROOF = `CMD:` / `LINK:` / `FILE:` / `CODE_REF:`.
+
+[CONTENT]
+## Когда применять
+- Когда в ходе работы появляется финальный `<proposed_plan>` и требуется запуск исполнения.
+
+## Правило привязки
+1) Не дублировать длинный runbook в repo prompt.
+2) Использовать GLOBAL_SKILL как SSOT для sync-контракта (new task, 3–6 steps, fail-closed).
+3) В proof фиксировать минимум один CMD и FILE по факту синхронизации.

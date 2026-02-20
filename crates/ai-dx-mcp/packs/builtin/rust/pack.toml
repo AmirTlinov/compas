@@ -1,0 +1,23 @@
+[pack]
+id = "rust"
+version = "0.1.0"
+description = "Rust pack: cargo test defaults for compas init"
+languages = ["rust"]
+
+[[detectors]]
+id = "cargo"
+any_paths = ["Cargo.toml"]
+
+[[tools]]
+[tools.tool]
+id = "rust-test"
+description = "Run cargo test"
+command = "cargo"
+args = ["test"]
+
+[canonical_tools]
+test = ["rust-test"]
+disabled = ["build", "lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]

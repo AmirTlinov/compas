@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANIFEST_PATH="${ROOT_DIR}/Cargo.toml"
+
+run_compas() {
+  cargo run -p ai-dx-mcp --manifest-path "$MANIFEST_PATH" -- "$@"
+}
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  ./dx validate [ratchet|strict|warn] [--write-baseline] [--repo-root <path>]
+  ./dx init [--apply] [--packs <builtin:...,...>] [--repo-root <path>]
+  ./dx gate <ci-fast|ci|flagship> [--dry-run] [--write-witness] [--repo-root <path>]
+  ./dx ci-fast [--dry-run] [--write-witness] [--repo-root <path>]
+  ./dx ci [--dry-run] [--write-witness] [--repo-root <path>]
+  ./dx flagship [--dry-run] [--write-witness] [--repo-root <path>]
+  ./dx docs-sync [--check]
+USAGE
+}
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 2
+fi
+
+cmd="$1"
+shift || true
+
+case "$cmd" in
+  init)
+    run_compas init "$@"
+    exit $?
+    ;;
+
+  validate)
+    mode="ratchet"
+    if [[ $# -gt 0 && "$1" != --* ]]; then
+      mode="$1"
+      shift
+    fi
+
+    case "$mode" in
+      ratchet|strict|warn) ;;
+      *)
+        echo "dx: unknown validate mode: $mode" >&2
+        usage >&2
+        exit 2
+        ;;
+    esac
+
+    run_compas validate "$mode" "$@"
+    exit $?
+    ;;
+
+  gate)
+    if [[ $# -lt 1 ]]; then
+      echo "dx: gate kind is required" >&2
+      usage >&2
+      exit 2
+    fi
+    kind="$1"
+    shift
+
+    case "$kind" in
+      ci-fast|ci|flagship) ;;
+      *)
+        echo "dx: unknown gate kind: $kind" >&2
+        usage >&2
+        exit 2
+        ;;
+    esac
+
+    run_compas gate "$kind" "$@"
+    exit $?
+    ;;
+
+  ci-fast|ci|flagship)
+    run_compas gate "$cmd" "$@"
+    exit $?
+    ;;
+
+  docs-sync)
+    python3 "${ROOT_DIR}/scripts/docs_sync.py" "$@"
+    exit $?
+    ;;
+
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+
+  *)
+    echo "dx: unknown command: $cmd" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

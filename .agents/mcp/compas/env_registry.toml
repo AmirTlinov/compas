@@ -1,0 +1,27 @@
+# compas env registry (single source of truth)
+#
+# Rules:
+# - name: UPPER_SNAKE_CASE
+# - required=true без default => validate -> env.required_missing
+# - sensitive=true => value в effective_config будет <redacted>
+
+[[vars]]
+name = "CARGO_TERM_COLOR"
+description = "Cargo output coloring for tool wrappers (used by cargo-test tool)."
+required = false
+default = "always"
+sensitive = false
+
+[[vars]]
+name = "AI_DX_REPO_ROOT"
+description = "Default repo root for CLI/MCP caller when explicit repo_root is omitted."
+required = false
+default = "."
+sensitive = false
+
+[[vars]]
+name = "AI_DX_WRITE_WITNESS"
+description = "Default gate witness behavior for wrappers/automation."
+required = false
+default = "false"
+sensitive = false

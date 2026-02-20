@@ -1,0 +1,17 @@
+[tool]
+id = "cargo-test-lite"
+description = "Cargo test (ai-dx-mcp, --no-default-features)"
+command = "cargo"
+args = ["test", "-p", "ai-dx-mcp", "--no-default-features"]
+timeout_ms = 600000
+max_stdout_bytes = 20000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 100
+min_stdout_bytes = 10
+expect_stdout_pattern = "test result:"
+expect_exit_codes = [0, 101]
+
+[tool.env]
+CARGO_TERM_COLOR = "always"

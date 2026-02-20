@@ -1,0 +1,40 @@
+[pack]
+id = "cmake"
+version = "0.1.0"
+description = "CMake pack: configure/build/ctest defaults for compas init"
+languages = ["c", "cpp"]
+
+[[detectors]]
+id = "cmake"
+any_paths = ["CMakeLists.txt"]
+
+[[tools]]
+[tools.tool]
+id = "cmake-configure"
+description = "cmake -S . -B build"
+command = "cmake"
+args = ["-S", ".", "-B", "build"]
+
+[[tools]]
+[tools.tool]
+id = "cmake-build"
+description = "cmake --build build"
+command = "cmake"
+args = ["--build", "build"]
+
+[[tools]]
+[tools.tool]
+id = "cmake-test"
+description = "ctest --output-on-failure (cwd=build)"
+command = "ctest"
+args = ["--output-on-failure"]
+cwd = "build"
+
+[canonical_tools]
+build = ["cmake-configure", "cmake-build"]
+test = ["cmake-configure", "cmake-build", "cmake-test"]
+disabled = ["lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]
+

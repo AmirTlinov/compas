@@ -1,0 +1,35 @@
+[pack]
+id = "dotnet"
+version = "0.1.0"
+description = ".NET pack: dotnet test defaults for compas init"
+languages = ["csharp"]
+
+[[detectors]]
+id = "global-json"
+any_paths = ["global.json"]
+
+[[detectors]]
+id = "dotnet-project-files"
+any_paths = ["*.sln", "**/*.sln", "*.csproj", "**/*.csproj"]
+
+[[detectors]]
+id = "directory-build-props"
+any_paths = ["Directory.Build.props"]
+
+[[detectors]]
+id = "dotnet-tools"
+any_paths = [".config/dotnet-tools.json"]
+
+[[tools]]
+[tools.tool]
+id = "dotnet-test"
+description = "dotnet test (default)"
+command = "dotnet"
+args = ["test"]
+
+[canonical_tools]
+test = ["dotnet-test"]
+disabled = ["build", "lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]

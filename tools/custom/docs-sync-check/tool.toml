@@ -1,0 +1,13 @@
+[tool]
+id = "docs-sync-check"
+description = "Verify that architecture docs and diagrams are in sync"
+command = "python3"
+args = ["scripts/docs_sync.py", "--check"]
+timeout_ms = 120000
+max_stdout_bytes = 20000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 10
+min_stdout_bytes = 1
+expect_exit_codes = [0]

@@ -1,0 +1,25 @@
+[pack]
+id = "node-npm"
+version = "0.1.0"
+description = "Node pack (npm): lockfile-driven defaults for compas init"
+languages = ["javascript", "typescript"]
+
+[[detectors]]
+id = "npm"
+all_paths = ["package.json"]
+any_paths = ["package-lock.json", "npm-shrinkwrap.json"]
+none_paths = ["pnpm-lock.yaml", "yarn.lock", "bun.lockb", "bun.lock"]
+
+[[tools]]
+[tools.tool]
+id = "npm-test"
+description = "Run npm test"
+command = "npm"
+args = ["test"]
+
+[canonical_tools]
+test = ["npm-test"]
+disabled = ["build", "lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]

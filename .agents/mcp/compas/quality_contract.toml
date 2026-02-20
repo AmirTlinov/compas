@@ -1,0 +1,65 @@
+# Compas Sentinel v1 — quality policy contract
+
+[quality]
+min_trust_score = 40
+allow_trust_drop = false
+allow_coverage_drop = false
+max_weighted_risk_increase = 0
+
+[exceptions]
+max_exceptions = 10
+max_suppressed_ratio = 0.30
+max_exception_window_days = 90
+
+[receipt_defaults]
+min_duration_ms = 500
+min_stdout_bytes = 10
+
+[governance]
+mandatory_checks = [
+  "boundary",
+  "supply_chain",
+  "loc",
+  "tool_budget",
+  "reuse_first",
+  "arch_layers",
+  "complexity_budget",
+  "contract_break",
+]
+mandatory_failure_modes = ["security_baseline", "resilience_defaults"]
+min_failure_modes = 8
+
+[proof]
+require_witness = true
+
+[baseline]
+snapshot_path = ".agents/mcp/compas/baselines/quality_snapshot.json"
+max_scope_narrowing = 0.10
+
+[impact]
+diff_base = "merge-base:origin/main"
+unmapped_path_policy = "observe"
+
+[[impact.rules]]
+id = "runtime-rust"
+path_globs = ["crates/ai-dx-mcp/src/**/*.rs", "crates/ai-dx-mcp/tests/**/*.rs"]
+required_tools = ["cargo-test", "cargo-test-lite"]
+
+[[impact.rules]]
+id = "docs-and-arch"
+path_globs = [
+  "AGENTS.md",
+  "ARCHITECTURE.md",
+  "README.md",
+  "docs/**/*.md",
+  "scripts/docs_sync.py",
+]
+required_tools = ["docs-sync-check"]
+
+[[impact.rules]]
+id = "compas-policy"
+path_globs = [
+  ".agents/mcp/compas/**/*.toml",
+  "tools/custom/**/*.toml",
+]
+required_tools = ["docs-sync-check", "cargo-test"]

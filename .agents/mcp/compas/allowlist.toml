@@ -1,0 +1,21 @@
+# compas allowlist (exception protocol)
+#
+# Каждая запись подавляет конкретное нарушение (rule=Violation.code) для точного path
+# (относительно repo root). Globs запрещены.
+#
+# Поля:
+# - id (уникальный)
+# - rule (например: "loc.max_exceeded")
+# - path (например: "crates/ai-dx-mcp/src/cli.rs")
+# - owner (кто отвечает)
+# - reason (почему исключение нужно)
+# - expires_at (опционально) "YYYY-MM-DD" (UTC). Если дата в прошлом — это violation `exception.expired`.
+#
+# Пример:
+# [[exceptions]]
+# id = "ex-001"
+# rule = "loc.max_exceeded"
+# path = "crates/ai-dx-mcp/src/cli.rs"
+# owner = "team"
+# reason = "temporary exception; refactor planned"
+# expires_at = "2026-03-01"

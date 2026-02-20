@@ -1,0 +1,243 @@
+{
+  "job_id": "gate-1771425732327-1519790-1",
+  "repo_root": "/media/amir/documents/projects/mcp/compas",
+  "kind": "ci_fast",
+  "dry_run": true,
+  "write_witness": false,
+  "gate_budget_ms": 55000,
+  "state": "succeeded",
+  "created_at_ms": 1771425732327,
+  "updated_at_ms": 1771425732478,
+  "expires_at_ms": 1771512132327,
+  "owner_pid": 1519790,
+  "result": {
+    "ok": true,
+    "error": null,
+    "repo_root": "/media/amir/documents/projects/mcp/compas",
+    "kind": "ci_fast",
+    "validate": {
+      "ok": true,
+      "error": null,
+      "schema_version": "3",
+      "repo_root": "/media/amir/documents/projects/mcp/compas",
+      "mode": "ratchet",
+      "violations": [],
+      "findings_v2": [],
+      "suppressed": [],
+      "loc": {
+        "files_scanned": 63,
+        "max_loc": 626,
+        "worst_path": "crates/ai-dx-mcp/src/app.rs"
+      },
+      "boundary": {
+        "files_scanned": 93,
+        "rules_checked": 5,
+        "violations": 0
+      },
+      "public_surface": {
+        "baseline_path": ".agents/mcp/compas/baselines/public_surface.json",
+        "max_pub_items": 80,
+        "items_total": 67,
+        "added_vs_baseline": 0,
+        "removed_vs_baseline": 0
+      },
+      "effective_config": {
+        "registry_path": ".agents/mcp/compas/env_registry.toml",
+        "registered_vars": 3,
+        "used_vars": [
+          "CARGO_TERM_COLOR"
+        ],
+        "entries": [
+          {
+            "name": "AI_DX_REPO_ROOT",
+            "description": "Default repo root for CLI/MCP caller when explicit repo_root is omitted.",
+            "required": false,
+            "sensitive": false,
+            "source": "default",
+            "value": ".",
+            "used_by_tools": []
+          },
+          {
+            "name": "AI_DX_WRITE_WITNESS",
+            "description": "Default gate witness behavior for wrappers/automation.",
+            "required": false,
+            "sensitive": false,
+            "source": "default",
+            "value": "false",
+            "used_by_tools": []
+          },
+          {
+            "name": "CARGO_TERM_COLOR",
+            "description": "Cargo output coloring for tool wrappers (used by cargo-test tool).",
+            "required": false,
+            "sensitive": false,
+            "source": "env",
+            "value": "always",
+            "used_by_tools": [
+              "cargo-test",
+              "cargo-test-lite",
+              "cargo-test-wasm"
+            ]
+          }
+        ]
+      },
+      "risk_summary": {
+        "findings_total": 0,
+        "by_category": {},
+        "by_severity": {}
+      },
+      "coverage": {
+        "catalog_total": 10,
+        "catalog_covered": 10,
+        "percent": 100.0,
+        "covered_modes": [
+          "dependency_hygiene",
+          "env_sprawl",
+          "fail_open",
+          "god_module_cycles",
+          "knowledge_continuity",
+          "policy_theater",
+          "public_surface_bloat",
+          "resilience_defaults",
+          "security_baseline",
+          "unplugged_iron"
+        ],
+        "uncovered_modes": [],
+        "effective_covered_modes": [
+          "dependency_hygiene",
+          "env_sprawl",
+          "fail_open",
+          "god_module_cycles",
+          "knowledge_continuity",
+          "policy_theater",
+          "public_surface_bloat",
+          "resilience_defaults",
+          "security_baseline",
+          "unplugged_iron"
+        ],
+        "declared_but_ineffective_modes": []
+      },
+      "trust_score": {
+        "score": 100,
+        "grade": "A",
+        "weights": {
+          "critical": 25,
+          "high": 10,
+          "medium": 4,
+          "low": 1
+        },
+        "coverage_penalty": 0
+      },
+      "verdict": {
+        "decision": {
+          "status": "pass",
+          "reasons": [],
+          "blocking_count": 0,
+          "observation_count": 0
+        },
+        "quality_posture": {
+          "trust_score": 100,
+          "trust_grade": "A",
+          "coverage_covered": 10,
+          "coverage_total": 10,
+          "weighted_risk": 0,
+          "findings_total": 0,
+          "risk_by_severity": {}
+        },
+        "suppressed_count": 0,
+        "suppressed_codes": []
+      },
+      "quality_posture": {
+        "trust_score": 100,
+        "trust_grade": "A",
+        "coverage_covered": 10,
+        "coverage_total": 10,
+        "weighted_risk": 0,
+        "findings_total": 0,
+        "risk_by_severity": {}
+      },
+      "agent_digest": {
+        "top_blockers": [],
+        "root_causes": [],
+        "minimal_fix_steps": [],
+        "confidence": "high",
+        "suppressed_count": 0,
+        "suppressed_top_codes": []
+      },
+      "summary_md": null,
+      "payload_meta": null
+    },
+    "receipts": [
+      {
+        "tool_id": "docs-sync-check",
+        "success": true,
+        "exit_code": 0,
+        "timed_out": false,
+        "duration_ms": 0,
+        "command": "python3",
+        "args": [
+          "scripts/docs_sync.py",
+          "--check"
+        ],
+        "stdout_tail": "[dry_run]",
+        "stderr_tail": "",
+        "stdout_bytes": 9,
+        "stderr_bytes": 0,
+        "stdout_sha256": "7c5269047eed46adc0eca5f6e6f9c7c54a227bdae96e2d5f99cdd94f57bd1d55",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "tool_id": "cargo-test",
+        "success": true,
+        "exit_code": 0,
+        "timed_out": false,
+        "duration_ms": 0,
+        "command": "cargo",
+        "args": [
+          "test"
+        ],
+        "stdout_tail": "[dry_run]",
+        "stderr_tail": "",
+        "stdout_bytes": 9,
+        "stderr_bytes": 0,
+        "stdout_sha256": "7c5269047eed46adc0eca5f6e6f9c7c54a227bdae96e2d5f99cdd94f57bd1d55",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "witness_path": null,
+    "witness": null,
+    "verdict": {
+      "decision": {
+        "status": "pass",
+        "reasons": [],
+        "blocking_count": 0,
+        "observation_count": 0
+      },
+      "quality_posture": {
+        "trust_score": 100,
+        "trust_grade": "A",
+        "coverage_covered": 10,
+        "coverage_total": 10,
+        "weighted_risk": 0,
+        "findings_total": 0,
+        "risk_by_severity": {}
+      },
+      "suppressed_count": 0,
+      "suppressed_codes": []
+    },
+    "agent_digest": {
+      "top_blockers": [],
+      "root_causes": [],
+      "minimal_fix_steps": [],
+      "confidence": "high",
+      "suppressed_count": 0,
+      "suppressed_top_codes": []
+    },
+    "summary_md": null,
+    "payload_meta": null,
+    "job": null,
+    "job_state": null,
+    "job_error": null
+  },
+  "job_error": null
+}

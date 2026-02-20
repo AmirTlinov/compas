@@ -1,0 +1,247 @@
+[plugin]
+id = "default"
+description = "MVP config for developing compas MCP in this repo"
+
+tool_import_globs = ["tools/custom/**/tool.toml"]
+
+[gate]
+ci_fast = ["docs-sync-check", "cargo-test"]
+ci = ["docs-sync-check", "cargo-test", "cargo-test-lite"]
+flagship = ["docs-sync-check", "cargo-test", "cargo-test-lite", "cargo-test-wasm"]
+
+[[checks.loc]]
+id = "loc-main"
+max_loc = 700
+include_globs = ["crates/ai-dx-mcp/src/**/*.rs"]
+exclude_globs = ["**/target/**", ".git/**", "**/tests/**"]
+baseline_path = ".agents/mcp/compas/baselines/loc.json"
+
+[[checks.env_registry]]
+id = "env-main"
+registry_path = ".agents/mcp/compas/env_registry.toml"
+
+[[checks.boundary]]
+id = "boundary-main"
+include_globs = [
+  "crates/**/*.rs",
+  "README.md",
+  ".agents/skills/compas-repo/**/*.md",
+  ".agents/mcp/compas/**/*.toml",
+  "dx",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+strip_rust_cfg_test_blocks = true
+
+[[checks.boundary.rules]]
+id = "no-glob-reexports"
+message = "glob re-exports are forbidden"
+deny_regex = "\\bpub\\s+use\\s+[^;]*::\\*\\s*;"
+
+[[checks.boundary.rules]]
+id = "alpha-no-obsolete-markers"
+message = "alpha policy: obsolete markers are forbidden"
+deny_regex = "(?i)\\blegac(?:y)\\b|backward\\s*-?\\s*compat(?:ibility)?|\\bdeprecat(?:ed)\\b|historical\\s+note"
+
+[[checks.boundary]]
+id = "boundary-high-impact-runtime-rust"
+include_globs = [
+  "crates/ai-dx-mcp/src/server.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+  "crates/ai-dx-mcp/src/app.rs",
+  "crates/ai-dx-mcp/src/gate_runner.rs",
+  "crates/ai-dx-mcp/src/runner.rs",
+  "crates/ai-dx-mcp/src/repo.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+strip_rust_cfg_test_blocks = true
+
+[[checks.boundary.rules]]
+id = "no-runtime-unwrap-expect"
+message = "unwrap/expect are forbidden in runtime paths"
+deny_regex = "\\.(?:unwrap|expect)\\s*\\("
+
+[[checks.boundary.rules]]
+id = "no-runtime-panic"
+message = "panic! is forbidden in runtime paths"
+deny_regex = "\\bpanic!\\s*\\("
+
+[[checks.boundary.rules]]
+id = "no-runtime-stdout"
+message = "println!/eprintln! are forbidden in runtime paths"
+deny_regex = "\\b(?:e?println)!\\s*\\("
+
+[[checks.surface]]
+id = "surface-main"
+max_items = 80
+include_globs = [
+  "crates/ai-dx-mcp/src/lib.rs",
+  "crates/ai-dx-mcp/src/api.rs",
+  "crates/ai-dx-mcp/src/api/**/*.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+]
+exclude_globs = ["**/target/**", ".git/**", "**/tests/**"]
+baseline_path = ".agents/mcp/compas/baselines/public_surface.json"
+
+[[checks.surface.rules]]
+description = "mod"
+regex = "^pub\\s+mod\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "struct"
+regex = "^pub\\s+struct\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "enum"
+regex = "^pub\\s+enum\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "trait"
+regex = "^pub\\s+trait\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "const"
+regex = "^pub\\s+const\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "static"
+regex = "^pub\\s+static\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "type"
+regex = "^pub\\s+type\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "fn"
+regex = "^pub\\s+async\\s+fn\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "fn"
+regex = "^pub\\s+fn\\s+([A-Za-z0-9_]+)"
+
+[[checks.surface.rules]]
+description = "use"
+regex = "^pub\\s+use\\s+(.+)$"
+
+[[checks.duplicates]]
+id = "duplicates-main"
+include_globs = ["**/*.rs", "**/*.toml", "**/*.md", "**/*.py", "dx"]
+exclude_globs = ["**/target/**", "**/node_modules/**", ".git/**"]
+max_file_bytes = 262144
+baseline_path = ".agents/mcp/compas/baselines/duplicates.json"
+
+[[checks.supply_chain]]
+id = "supply-chain-main"
+
+[[checks.tool_budget]]
+id = "tool-budget-main"
+max_tools_total = 12
+max_tools_per_plugin = 8
+max_gate_tools_per_kind = 6
+max_checks_total = 20
+
+[[checks.reuse_first]]
+id = "reuse-first-main"
+include_globs = ["crates/ai-dx-mcp/src/**/*.rs"]
+exclude_globs = [
+  "**/target/**",
+  ".git/**",
+  "crates/ai-dx-mcp/src/checks/**/*.rs",
+  "crates/ai-dx-mcp/src/init/planner/tests.rs",
+]
+min_block_lines = 12
+
+[[checks.arch_layers]]
+id = "arch-layers-main"
+
+[[checks.arch_layers.layers]]
+id = "core"
+include_globs = [
+  "crates/ai-dx-mcp/src/api.rs",
+  "crates/ai-dx-mcp/src/config.rs",
+  "crates/ai-dx-mcp/src/env_registry.rs",
+  "crates/ai-dx-mcp/src/exceptions.rs",
+  "crates/ai-dx-mcp/src/failure_modes.rs",
+  "crates/ai-dx-mcp/src/hash.rs",
+  "crates/ai-dx-mcp/src/validate_insights.rs",
+  "crates/ai-dx-mcp/src/witness.rs",
+]
+module_prefixes = [
+  "api",
+  "config",
+  "env_registry",
+  "exceptions",
+  "failure_modes",
+  "hash",
+  "validate_insights",
+  "witness",
+]
+
+[[checks.arch_layers.layers]]
+id = "orchestration"
+include_globs = [
+  "crates/ai-dx-mcp/src/app.rs",
+  "crates/ai-dx-mcp/src/gate_runner.rs",
+  "crates/ai-dx-mcp/src/repo.rs",
+  "crates/ai-dx-mcp/src/repo_strict.rs",
+  "crates/ai-dx-mcp/src/runner.rs",
+]
+module_prefixes = ["app", "gate_runner", "repo", "repo_strict", "runner", "checks"]
+
+[[checks.arch_layers.layers]]
+id = "interface"
+include_globs = [
+  "crates/ai-dx-mcp/src/main.rs",
+  "crates/ai-dx-mcp/src/server.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+  "crates/ai-dx-mcp/src/wasm.rs",
+]
+module_prefixes = ["main", "server", "server_catalog", "wasm"]
+
+[[checks.arch_layers.rules]]
+from_layer = "core"
+deny_to_layers = ["orchestration", "interface"]
+
+[[checks.dead_code]]
+id = "dead-code-main"
+include_globs = [
+  "crates/ai-dx-mcp/src/checks/common.rs",
+  "crates/ai-dx-mcp/src/hash.rs",
+  "crates/ai-dx-mcp/src/repo/checks_merge.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+min_symbol_len = 8
+blocking = false
+
+[[checks.orphan_api]]
+id = "orphan-api-main"
+include_globs = [
+  "crates/ai-dx-mcp/src/checks/common.rs",
+  "crates/ai-dx-mcp/src/repo/checks_merge.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+min_symbol_len = 8
+blocking = false
+
+[[checks.complexity_budget]]
+id = "complexity-main"
+include_globs = [
+  "crates/ai-dx-mcp/src/checks/common.rs",
+  "crates/ai-dx-mcp/src/hash.rs",
+  "crates/ai-dx-mcp/src/repo/checks_merge.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+max_function_lines = 220
+max_cyclomatic = 60
+max_cognitive = 140
+
+[[checks.contract_break]]
+id = "contract-main"
+include_globs = [
+  "crates/ai-dx-mcp/src/api.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+baseline_path = ".agents/mcp/compas/baselines/contracts.json"
+allow_additions = true

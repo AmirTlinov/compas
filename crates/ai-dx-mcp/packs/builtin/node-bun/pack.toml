@@ -1,0 +1,25 @@
+[pack]
+id = "node-bun"
+version = "0.1.0"
+description = "Node pack (bun): lockfile-driven defaults for compas init"
+languages = ["javascript", "typescript"]
+
+[[detectors]]
+id = "bun"
+all_paths = ["package.json"]
+any_paths = ["bun.lockb", "bun.lock"]
+none_paths = ["pnpm-lock.yaml", "yarn.lock", "package-lock.json", "npm-shrinkwrap.json"]
+
+[[tools]]
+[tools.tool]
+id = "bun-test"
+description = "Run bun test"
+command = "bun"
+args = ["test"]
+
+[canonical_tools]
+test = ["bun-test"]
+disabled = ["build", "lint", "fmt", "docs"]
+
+[gates]
+ci_fast = ["test"]
