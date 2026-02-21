@@ -9,7 +9,7 @@
 # - path (например: "crates/ai-dx-mcp/src/cli.rs")
 # - owner (кто отвечает)
 # - reason (почему исключение нужно)
-# - expires_at (опционально) "YYYY-MM-DD" (UTC). Если дата в прошлом — это violation `exception.expired`.
+# - expires_at "YYYY-MM-DD" (UTC). Если дата в прошлом — это violation `exception.expired`.
 #
 # Пример:
 # [[exceptions]]

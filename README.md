@@ -128,7 +128,7 @@ CLI возвращает ненулевой exit code, если `validate/gate` 
 
 ## Exception protocol (allowlist)
 - Файл: `.agents/mcp/compas/allowlist.toml`.
-- Формат: `[[exceptions]]` с `id, rule, path, owner, reason, expires_at?`.
+- Формат: `[[exceptions]]` с `id, rule, path, owner, reason, expires_at`.
 - `path` — точный относительный путь (globs запрещены).
 - Невалидный allowlist → `exception.allowlist_invalid` (suppression не применяется).
 - Просроченное исключение → `exception.expired`.
