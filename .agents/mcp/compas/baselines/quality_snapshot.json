@@ -142,19 +142,19 @@
   ],
   "duplicate_groups": [],
   "file_universe": {
-    "loc_universe": 63,
-    "loc_scanned": 63,
+    "loc_universe": 126,
+    "loc_scanned": 126,
     "surface_universe": 6,
     "surface_scanned": 6,
-    "boundary_universe": 93,
-    "boundary_scanned": 93,
-    "duplicates_universe": 131,
-    "duplicates_scanned": 131
+    "boundary_universe": 95,
+    "boundary_scanned": 95,
+    "duplicates_universe": 133,
+    "duplicates_scanned": 133
   },
-  "written_at": "2026-02-18T00:46:02.532199310+00:00",
+  "written_at": "2026-02-21T17:06:10.583903774+00:00",
   "written_by": {
-    "reason": "Refresh baseline after rustfmt normalization",
-    "owner": "ai-agent"
+    "reason": "Normalize P06 plugin folder name to lowercase p06 and refresh quality snapshot baseline.",
+    "owner": "p06"
   },
-  "config_hash": "sha256:baa3d0b1072a098886a3bb14a562c07ca28f777412c130fa8bbf1982f4bca0c1"
+  "config_hash": "sha256:6b49d65a54a47be8e2bdd557aca474bd8c6357f9fc69d50ff54c924b73622f17"
 }
