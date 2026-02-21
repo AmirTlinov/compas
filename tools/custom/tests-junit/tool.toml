@@ -1,0 +1,14 @@
+[tool]
+id = "tests-junit"
+description = "Run normalized JUnit-aware test checks for Rust and Python suites"
+command = "python3"
+args = ["tools/custom/tests-junit/run_tests_junit.py"]
+timeout_ms = 600000
+max_stdout_bytes = 20000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 10
+min_stdout_bytes = 80
+expect_stdout_pattern = "P14 tests-junit"
+expect_exit_codes = [0]
