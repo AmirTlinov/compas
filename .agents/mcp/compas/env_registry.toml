@@ -34,8 +34,8 @@ default = "false"
 sensitive = false
 
 [[vars]]
-name = "NO_COLOR"
-description = "Disable ANSI colors for tools that emit machine-readable output."
+name = "PYTHONUNBUFFERED"
+description = "For python tools to emit output immediately during CI/test runs."
 required = false
 default = "1"
 sensitive = false
