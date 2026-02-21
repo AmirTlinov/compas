@@ -4,7 +4,7 @@ SSOT архитектуры проекта `compas`.
 Источник данных для карты: `scripts/docs_sync.py`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 9c3a0dfc65ed99c3_
+_fingerprint: 18b55dacf0a7028a_
 
 ## Runtime Map (auto)
 
@@ -32,6 +32,7 @@ _fingerprint: 9c3a0dfc65ed99c3_
 | `p16` | P16 impact-to-gate wiring for runtime Rust changes | — | `cargo-test-wasm` / — / — |
 | `p17` | Docs sync no-drift checks for architecture and documentation contract health | `p17-docs-no-drift` | `p17-docs-no-drift` / — / — |
 | `p19` | P19 plugin wires a unified lint gate for rust, python, and js/ts quality checks | — | `lint-unified` / `lint-unified` / `lint-unified` |
+| `p20` | Performance Regression Budget gate for AI edits and runtime-impact checks. | `perf-bench` | `perf-bench` / `perf-bench` / `perf-bench` |
 
 ### Installed tools
 | Tool | Owner plugin | Purpose | Command |
@@ -44,6 +45,7 @@ _fingerprint: 9c3a0dfc65ed99c3_
 | `lint-unified` | `default` | Run unified lint checks (clippy first, then language linters when relevant) through one gate tool | `python3` |
 | `p01-policy-guard` | `p01` | Validate plugin tool commands do not use shell binaries in strict mode | `python3` |
 | `p17-docs-no-drift` | `p17` | Run docs sync no-drift validation across managed docs and supported generators | `python3` |
+| `perf-bench` | `p20` | Compare performance baselines against current metrics and fail on budget regressions | `python3` |
 | `semgrep` | `default` | Run semgrep SARIF scan for security baseline findings | `semgrep` |
 | `spec-check` | `default` | Validate Spec/ADR gate artifacts (Goal, Non-goals, Acceptance, Edge-cases, Rollback) before code | `python3` |
 
@@ -91,6 +93,9 @@ flowchart LR
   P_p17 --> T_p17_docs_no_drift["tool:p17-docs-no-drift"]
   G --> T_p17_docs_no_drift
   PL --> P_p19["plugin:p19"]
+  PL --> P_p20["plugin:p20"]
+  P_p20 --> T_perf_bench["tool:perf-bench"]
+  G --> T_perf_bench
   TL --> T_cargo_test
   TL --> T_cargo_test_lite
   TL --> T_cargo_test_wasm
@@ -99,6 +104,7 @@ flowchart LR
   TL --> T_lint_unified
   TL --> T_p01_policy_guard
   TL --> T_p17_docs_no_drift
+  TL --> T_perf_bench
   TL --> T_semgrep
   TL --> T_spec_check
 ```

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "metrics": {
+    "api_request_p95_ms": {
+      "value": 120.0,
+      "max_delta_pct": 8.0,
+      "max_delta_abs": 12.0,
+      "higher_is_worse": true,
+      "severity": "medium"
+    },
+    "api_request_p99_ms": {
+      "value": 280.0,
+      "max_delta_pct": 10.0,
+      "max_delta_abs": 24.0,
+      "higher_is_worse": true,
+      "severity": "high"
+    },
+    "memory_peak_mb": {
+      "value": 640.0,
+      "max_delta_pct": 12.0,
+      "max_delta_abs": 96.0,
+      "higher_is_worse": true,
+      "severity": "low"
+    },
+    "error_rate_pct": {
+      "value": 0.08,
+      "max_delta_pct": 25.0,
+      "max_delta_abs": 0.08,
+      "higher_is_worse": true,
+      "severity": "critical"
+    }
+  }
+}

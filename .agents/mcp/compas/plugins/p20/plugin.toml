@@ -1,0 +1,9 @@
+[plugin]
+id = "p20"
+description = "Performance Regression Budget gate for AI edits and runtime-impact checks."
+tool_import_globs = ["tools/p20/**/tool.toml"]
+
+[gate]
+ci_fast = ["perf-bench"]
+ci = ["perf-bench"]
+flagship = ["perf-bench"]

@@ -1,0 +1,20 @@
+[tool]
+id = "perf-bench"
+description = "Compare performance baselines against current metrics and fail on budget regressions"
+command = "python3"
+args = [
+  "scripts/perf_bench.py",
+  "--baseline",
+  ".agents/mcp/compas/baselines/perf.json",
+  "--current",
+  ".agents/mcp/compas/perf/current.json",
+]
+timeout_ms = 120000
+max_stdout_bytes = 20000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 1
+min_stdout_bytes = 12
+expect_stdout_pattern = '"status"\s*:\s*"(pass|fail|error)"'
+expect_exit_codes = [0, 1]
