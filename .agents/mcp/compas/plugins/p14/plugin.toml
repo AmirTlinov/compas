@@ -1,0 +1,8 @@
+[plugin]
+id = "p14"
+description = "P14 enforces normalized JUnit-aware test execution in gate"
+
+[gate]
+ci_fast = ["tests-junit"]
+ci = ["tests-junit"]
+flagship = ["tests-junit"]

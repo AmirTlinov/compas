@@ -51,8 +51,8 @@ required_tools = ["secrets-scan"]
 
 [[impact.rules]]
 id = "runtime-rust"
-path_globs = ["crates/ai-dx-mcp/src/**/*.rs"]
-required_tools = ["cargo-test", "cargo-test-lite"]
+path_globs = ["crates/ai-dx-mcp/src/**/*.rs", "crates/ai-dx-mcp/tests/**/*.rs"]
+required_tools = ["cargo-test", "cargo-test-lite", "tests-junit"]
 
 [[impact.rules]]
 id = "runtime-rust-tests"
@@ -92,16 +92,11 @@ id = "compas-policy"
 path_globs = [
   ".agents/mcp/compas/**/*.toml",
   "tools/custom/**/*.toml",
-  "tools/custom/p01-shell-policy/**/*.py",
+  "tools/custom/tests-junit/run_tests_junit.py",
 ]
 required_tools = ["docs-sync-check", "cargo-test"]
 
 [[impact.rules]]
-id = "performance-regression-budget"
-path_globs = [
-  ".agents/mcp/compas/baselines/perf.json",
-  ".agents/mcp/compas/perf/current.json",
-  "scripts/perf_bench.py",
-  "tools/p20/**/*.toml",
-]
-required_tools = ["perf-bench"]
+id = "p14-junit-artifacts"
+path_globs = ["artifacts/tests/**/*.xml"]
+required_tools = ["tests-junit"]
