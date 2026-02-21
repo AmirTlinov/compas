@@ -146,15 +146,15 @@
     "loc_scanned": 126,
     "surface_universe": 6,
     "surface_scanned": 6,
-    "boundary_universe": 118,
-    "boundary_scanned": 118,
-    "duplicates_universe": 181,
-    "duplicates_scanned": 181
+    "boundary_universe": 240,
+    "boundary_scanned": 240,
+    "duplicates_universe": 183,
+    "duplicates_scanned": 183
   },
-  "written_at": "2026-02-21T18:28:03.947438909+00:00",
+  "written_at": "2026-02-21T18:35:13.940246238+00:00",
   "written_by": {
-    "reason": "Rebase refresh against stabilized main",
+    "reason": "Refresh quality snapshot after integrating P04 boundary and arch-layer plugin",
     "owner": "codex"
   },
-  "config_hash": "sha256:1cff500d418d92eac84e0d6d4b74abb911829d14509040682ea5a5b04980efca"
+  "config_hash": "sha256:3227f9353d98cd3e198dcc0f9908fa7c90a5d4cebc37e64420c8cdbf5a16e3b0"
 }

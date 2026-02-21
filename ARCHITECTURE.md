@@ -4,7 +4,7 @@ SSOT архитектуры проекта `compas`.
 Источник данных для карты: `scripts/docs_sync.py`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 5113af93d7040a0e_
+_fingerprint: 2f94391d6e77263b_
 
 ## Runtime Map (auto)
 
@@ -25,6 +25,7 @@ _fingerprint: 5113af93d7040a0e_
 | `p01` | Paranoid Tool Policy guardrail for strict tool execution | `p01-policy-guard` | `p01-policy-guard`, `cargo-test-lite` / `p01-policy-guard` / `p01-policy-guard` |
 | `p02` | Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation | — | `spec-check` / `spec-check` / `spec-check` |
 | `p03` | P03 plugin enforces plan-to-diff scope consistency checks | — | `diff-scope-check` / `diff-scope-check` / `diff-scope-check` |
+| `p04` | Architecture layers, contract boundaries, and boundary policy hardening | — | `cargo-test-lite` / — / — |
 | `p06` | Complexity and LOC budgets for ai-dx-mcp changes | — | — / — / — |
 | `p07` | Dead code and orphan API detection | — | — / — / — |
 | `p08` | P08 staged integration: reserve plugin slot without changing active checks hash | — | — / — / `docs-sync-check` |
@@ -105,6 +106,7 @@ flowchart LR
   G --> T_p01_policy_guard
   PL --> P_p02["plugin:p02"]
   PL --> P_p03["plugin:p03"]
+  PL --> P_p04["plugin:p04"]
   PL --> P_p06["plugin:p06"]
   PL --> P_p07["plugin:p07"]
   PL --> P_p08["plugin:p08"]
