@@ -4,7 +4,7 @@ SSOT архитектуры проекта `compas`.
 Источник данных для карты: `scripts/docs_sync.py`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 4a3a6b95990344eb_
+_fingerprint: 1efef80e6fdbcaba_
 
 ## Runtime Map (auto)
 
@@ -21,8 +21,16 @@ _fingerprint: 4a3a6b95990344eb_
 ### Installed plugins
 | Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
 |---|---|---|---|
-| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `semgrep`, `spec-check` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `p01` | Paranoid Tool Policy guardrail for strict tool execution | `p01-policy-guard` | `p01-policy-guard`, `cargo-test-lite` / `p01-policy-guard` / `p01-policy-guard` |
+| `p02` | Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation | — | `spec-check` / `spec-check` / `spec-check` |
+| `p03` | P03 plugin enforces plan-to-diff scope consistency checks | — | `diff-scope-check` / `diff-scope-check` / `diff-scope-check` |
+| `p06` | Complexity and LOC budgets for ai-dx-mcp changes | — | — / — / — |
+| `p08` | P08 staged integration: reserve plugin slot without changing active checks hash | — | — / — / `docs-sync-check` |
 | `p09` | Supply-chain gate for deterministic dependency lockfiles and stable versions | — | — / — / — |
+| `p12` | P12 wiring: add Semgrep security scan into gate flow | — | `semgrep` / `semgrep` / `semgrep` |
+| `p16` | P16 impact-to-gate wiring for runtime Rust changes | — | `cargo-test-wasm` / — / — |
+| `p19` | P19 plugin wires a unified lint gate for rust, python, and js/ts quality checks | — | `lint-unified` / `lint-unified` / `lint-unified` |
 
 ### Installed tools
 | Tool | Owner plugin | Purpose | Command |
@@ -61,7 +69,23 @@ flowchart LR
   G --> T_diff_scope_check
   P_default --> T_docs_sync_check["tool:docs-sync-check"]
   G --> T_docs_sync_check
+  P_default --> T_lint_unified["tool:lint-unified"]
+  G --> T_lint_unified
+  P_default --> T_semgrep["tool:semgrep"]
+  G --> T_semgrep
+  P_default --> T_spec_check["tool:spec-check"]
+  G --> T_spec_check
+  PL --> P_p01["plugin:p01"]
+  P_p01 --> T_p01_policy_guard["tool:p01-policy-guard"]
+  G --> T_p01_policy_guard
+  PL --> P_p02["plugin:p02"]
+  PL --> P_p03["plugin:p03"]
+  PL --> P_p06["plugin:p06"]
+  PL --> P_p08["plugin:p08"]
   PL --> P_p09["plugin:p09"]
+  PL --> P_p12["plugin:p12"]
+  PL --> P_p16["plugin:p16"]
+  PL --> P_p19["plugin:p19"]
   TL --> T_cargo_test
   TL --> T_cargo_test_lite
   TL --> T_cargo_test_wasm
