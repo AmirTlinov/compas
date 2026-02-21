@@ -1,0 +1,115 @@
+[plugin]
+id = "p04"
+description = "Architecture layers, contract boundaries, and boundary policy hardening"
+tool_import_globs = []
+
+[[checks.boundary]]
+id = "p04-boundary-main"
+include_globs = [
+  "crates/**/*.rs",
+  "README.md",
+  ".agents/skills/compas-repo/**/*.md",
+  ".agents/mcp/compas/**/*.toml",
+  "dx",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+strip_rust_cfg_test_blocks = true
+
+[[checks.boundary.rules]]
+id = "no-glob-reexports"
+message = "glob re-exports are forbidden"
+deny_regex = "\\bpub\\s+use\\s+[^;]*::\\*\\s*;"
+
+[[checks.boundary.rules]]
+id = "alpha-no-obsolete-markers"
+message = "alpha policy: obsolete markers are forbidden"
+deny_regex = "(?i)\\blegac(?:y)\\b|backward\\s*-?\\s*compat(?:ibility)?|\\bdeprecat(?:ed)\\b|historical\\s+note"
+
+[[checks.boundary]]
+id = "p04-boundary-high-impact-runtime-rust"
+include_globs = [
+  "crates/ai-dx-mcp/src/server.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+  "crates/ai-dx-mcp/src/app.rs",
+  "crates/ai-dx-mcp/src/gate_runner.rs",
+  "crates/ai-dx-mcp/src/runner.rs",
+  "crates/ai-dx-mcp/src/repo.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+strip_rust_cfg_test_blocks = true
+
+[[checks.boundary.rules]]
+id = "no-runtime-unwrap-expect"
+message = "unwrap/expect are forbidden in runtime paths"
+deny_regex = "\\.(?:unwrap|expect)\\s*\\("
+
+[[checks.boundary.rules]]
+id = "no-runtime-panic"
+message = "panic! is forbidden in runtime paths"
+deny_regex = "\\bpanic!\\s*\\("
+
+[[checks.boundary.rules]]
+id = "no-runtime-stdout"
+message = "println!/eprintln! are forbidden in runtime paths"
+deny_regex = "\\b(?:e?println)!\\s*\\("
+
+[[checks.arch_layers]]
+id = "p04-arch-layers-main"
+
+[[checks.arch_layers.layers]]
+id = "core"
+include_globs = [
+  "crates/ai-dx-mcp/src/api.rs",
+  "crates/ai-dx-mcp/src/config.rs",
+  "crates/ai-dx-mcp/src/env_registry.rs",
+  "crates/ai-dx-mcp/src/exceptions.rs",
+  "crates/ai-dx-mcp/src/failure_modes.rs",
+  "crates/ai-dx-mcp/src/hash.rs",
+  "crates/ai-dx-mcp/src/validate_insights.rs",
+  "crates/ai-dx-mcp/src/witness.rs",
+]
+module_prefixes = [
+  "api",
+  "config",
+  "env_registry",
+  "exceptions",
+  "failure_modes",
+  "hash",
+  "validate_insights",
+  "witness",
+]
+
+[[checks.arch_layers.layers]]
+id = "orchestration"
+include_globs = [
+  "crates/ai-dx-mcp/src/app.rs",
+  "crates/ai-dx-mcp/src/gate_runner.rs",
+  "crates/ai-dx-mcp/src/repo.rs",
+  "crates/ai-dx-mcp/src/repo_strict.rs",
+  "crates/ai-dx-mcp/src/runner.rs",
+]
+module_prefixes = ["app", "gate_runner", "repo", "repo_strict", "runner", "checks"]
+
+[[checks.arch_layers.layers]]
+id = "interface"
+include_globs = [
+  "crates/ai-dx-mcp/src/main.rs",
+  "crates/ai-dx-mcp/src/server.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+  "crates/ai-dx-mcp/src/wasm.rs",
+]
+module_prefixes = ["main", "server", "server_catalog", "wasm"]
+
+[[checks.arch_layers.rules]]
+from_layer = "core"
+deny_to_layers = ["orchestration", "interface"]
+
+[[checks.contract_break]]
+id = "p04-contract-main"
+include_globs = [
+  "crates/ai-dx-mcp/src/api.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+baseline_path = ".agents/mcp/compas/baselines/contracts.json"
+allow_additions = true
