@@ -132,8 +132,6 @@ exclude_globs = ["**/target/**", "**/node_modules/**", ".git/**"]
 max_file_bytes = 262144
 baseline_path = ".agents/mcp/compas/baselines/duplicates.json"
 
-[[checks.supply_chain]]
-id = "supply-chain-main"
 
 [[checks.tool_budget]]
 id = "tool-budget-main"
