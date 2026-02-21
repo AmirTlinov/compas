@@ -1,0 +1,6 @@
+[plugin]
+id = "p22"
+description = "P22 plugin placeholder for structured reports ingestion and future adapter wiring."
+
+[[checks.supply_chain]]
+id = "p22-supply-chain-placeholder"

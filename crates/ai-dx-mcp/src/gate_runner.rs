@@ -4,6 +4,7 @@ use crate::{
     config::{ImpactUnmappedPathPolicy, QualityContractConfig, ToolReceiptContract},
     repo::load_repo_config,
     runner::run_project_tool_with_timeout_override,
+    structured_report::ingest_tool_report,
     validate_insights::build_agent_digest,
     witness::maybe_write_gate_witness,
 };
@@ -502,7 +503,7 @@ pub(crate) async fn gate(
         )
         .await
         {
-            Ok(r) => {
+            Ok(mut r) => {
                 if let Err(err) = ensure_receipt_invariants(&r) {
                     let out =
                         gate_fail(repo_root, kind, validate, receipts, receipt_violations, err);
@@ -522,6 +523,12 @@ pub(crate) async fn gate(
                     && let Err(v) = check_receipt_contract(&r, &contract)
                 {
                     receipt_violations.push(v);
+                }
+                if !dry_run && let Some(report_cfg) = &tool.report {
+                    let (report, mut violations) =
+                        ingest_tool_report(Path::new(repo_root), &tool.id, report_cfg);
+                    r.structured_report = report;
+                    receipt_violations.append(&mut violations);
                 }
 
                 let success = r.success;

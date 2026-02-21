@@ -160,6 +160,7 @@ pub async fn run_project_tool_with_timeout_override(
             stderr_bytes: stderr.len(),
             stdout_sha256: sha256_hex(stdout),
             stderr_sha256: sha256_hex(stderr),
+            structured_report: None,
         });
     }
 
@@ -217,6 +218,7 @@ pub async fn run_project_tool_with_timeout_override(
         stderr_bytes: stderr.total_bytes,
         stdout_sha256: stdout.sha256,
         stderr_sha256: stderr.sha256,
+        structured_report: None,
     })
 }
 
@@ -237,6 +239,7 @@ mod tests {
             timeout_ms: None,
             max_stdout_bytes: None,
             max_stderr_bytes: None,
+            report: None,
             receipt_contract: None,
             env: BTreeMap::new(),
         };
@@ -281,6 +284,7 @@ mod tests {
             timeout_ms: Some(100),
             max_stdout_bytes: None,
             max_stderr_bytes: None,
+            report: None,
             receipt_contract: None,
             env: BTreeMap::new(),
         };

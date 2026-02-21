@@ -18,6 +18,7 @@ pub mod response;
 pub mod runner;
 pub mod server;
 mod server_catalog;
+mod structured_report;
 mod validate_insights;
 mod wasm;
 mod witness;

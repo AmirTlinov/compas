@@ -345,6 +345,8 @@ pub struct Receipt {
     pub stderr_bytes: usize,
     pub stdout_sha256: String,
     pub stderr_sha256: String,
+    #[serde(default)]
+    pub structured_report: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

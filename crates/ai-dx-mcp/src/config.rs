@@ -35,6 +35,8 @@ pub struct ProjectTool {
     pub max_stdout_bytes: Option<usize>,
     pub max_stderr_bytes: Option<usize>,
     #[serde(default)]
+    pub report: Option<serde_json::Value>,
+    #[serde(default)]
     pub receipt_contract: Option<ToolReceiptContract>,
     #[serde(default)]
     pub env: BTreeMap<String, String>,

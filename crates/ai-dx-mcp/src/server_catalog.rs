@@ -4,6 +4,7 @@ use crate::repo_view::{
     to_public_plugin_info, to_public_plugin_spec, to_public_tool_spec_with_owner,
 };
 use crate::runner::run_project_tool;
+use crate::structured_report::ingest_tool_report;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -269,9 +270,31 @@ pub(crate) async fn exec(repo_root: &str, req: &ToolsRunRequest) -> ToolsRunOutp
     };
 
     match run_project_tool(std::path::Path::new(repo_root), tool, &extra_args, dry_run).await {
-        Ok(receipt) => {
+        Ok(mut receipt) => {
+            let mut report_blocking = false;
+            let mut report_violations = 0usize;
+            if !dry_run && let Some(report_cfg) = &tool.report {
+                let (report, violations) =
+                    ingest_tool_report(std::path::Path::new(repo_root), &tool.id, report_cfg);
+                report_blocking = violations
+                    .iter()
+                    .any(|v| matches!(v.tier, ViolationTier::Blocking));
+                report_violations = violations.len();
+                if receipt.success && report_blocking {
+                    receipt.success = false;
+                }
+                receipt.structured_report = report;
+            }
             let error = if receipt.success {
                 None
+            } else if report_blocking {
+                Some(ApiError {
+                    code: "tools.structured_report.blocking_findings".to_string(),
+                    message: format!(
+                        "blocking findings from structured report: tool_id={}; count={report_violations}",
+                        receipt.tool_id
+                    ),
+                })
             } else {
                 Some(ApiError {
                     code: "compas.exec.exit_nonzero".to_string(),

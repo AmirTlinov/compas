@@ -353,6 +353,7 @@ fn resolve_gate_tools_maps_canonical_ids_and_honors_gate_kinds() {
         timeout_ms: None,
         max_stdout_bytes: None,
         max_stderr_bytes: None,
+        report: None,
         receipt_contract: None,
         env: BTreeMap::new(),
     };
