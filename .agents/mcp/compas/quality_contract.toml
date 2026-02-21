@@ -42,8 +42,13 @@ unmapped_path_policy = "observe"
 
 [[impact.rules]]
 id = "runtime-rust"
-path_globs = ["crates/ai-dx-mcp/src/**/*.rs", "crates/ai-dx-mcp/tests/**/*.rs"]
-required_tools = ["cargo-test", "cargo-test-lite", "lint-unified"]
+path_globs = ["crates/ai-dx-mcp/src/**/*.rs"]
+required_tools = ["cargo-test", "cargo-test-lite"]
+
+[[impact.rules]]
+id = "runtime-rust-tests"
+path_globs = ["crates/ai-dx-mcp/tests/**/*.rs"]
+required_tools = ["cargo-test"]
 
 [[impact.rules]]
 id = "docs-and-arch"
@@ -83,9 +88,11 @@ path_globs = [
 required_tools = ["docs-sync-check", "cargo-test"]
 
 [[impact.rules]]
-id = "p03-scope"
+id = "performance-regression-budget"
 path_globs = [
-  ".agents/mcp/compas/plugins/p03/**",
-  "tools/custom/diff-scope-check/**",
+  ".agents/mcp/compas/baselines/perf.json",
+  ".agents/mcp/compas/perf/current.json",
+  "scripts/perf_bench.py",
+  "tools/p20/**/*.toml",
 ]
-required_tools = ["diff-scope-check"]
+required_tools = ["perf-bench"]

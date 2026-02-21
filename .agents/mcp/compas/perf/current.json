@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "metrics": {
+    "api_request_p95_ms": {
+      "value": 120.0
+    },
+    "api_request_p99_ms": {
+      "value": 280.0
+    },
+    "memory_peak_mb": {
+      "value": 640.0
+    },
+    "error_rate_pct": {
+      "value": 0.08
+    }
+  }
+}
