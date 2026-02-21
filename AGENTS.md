@@ -16,7 +16,7 @@
 Ниже auto-managed карта, синхронизация: `./dx docs-sync`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 9adc3595f6eefccb_
+_fingerprint: 04a886c60240cf70_
 
 ## Runtime Map (auto)
 
@@ -33,7 +33,7 @@ _fingerprint: 9adc3595f6eefccb_
 ### Installed plugins
 | Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
 |---|---|---|---|
-| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `secrets-scan`, `semgrep`, `spec-check`, `tests-junit` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `log-scan`, `secrets-scan`, `semgrep`, `spec-check`, `tests-junit` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
 | `p01` | Paranoid Tool Policy guardrail for strict tool execution | `p01-policy-guard` | `p01-policy-guard`, `cargo-test-lite` / `p01-policy-guard` / `p01-policy-guard` |
 | `p02` | Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation | — | `spec-check` / `spec-check` / `spec-check` |
 | `p03` | P03 plugin enforces plan-to-diff scope consistency checks | — | `diff-scope-check` / `diff-scope-check` / `diff-scope-check` |
@@ -45,6 +45,7 @@ _fingerprint: 9adc3595f6eefccb_
 | `p14` | P14 enforces normalized JUnit-aware test execution in gate | — | `tests-junit` / `tests-junit` / `tests-junit` |
 | `p16` | P16 impact-to-gate wiring for runtime Rust changes | — | `cargo-test-wasm` / — / — |
 | `p17` | Docs sync no-drift checks for architecture and documentation contract health | `p17-docs-no-drift` | `p17-docs-no-drift` / — / — |
+| `p18` | Prevent PII and secret leaks in logging output | — | `log-scan` / `log-scan` / `log-scan` |
 | `p19` | P19 plugin wires a unified lint gate for rust, python, and js/ts quality checks | — | `lint-unified` / `lint-unified` / `lint-unified` |
 | `p20` | Performance Regression Budget gate for AI edits and runtime-impact checks. | `perf-bench` | `perf-bench` / `perf-bench` / `perf-bench` |
 
@@ -57,6 +58,7 @@ _fingerprint: 9adc3595f6eefccb_
 | `diff-scope-check` | `default` | Check changed files against the explicit scope contract for plugin P03 | `python3` |
 | `docs-sync-check` | `default` | Verify that architecture docs and diagrams are in sync | `python3` |
 | `lint-unified` | `default` | Run unified lint checks (clippy first, then language linters when relevant) through one gate tool | `python3` |
+| `log-scan` | `default` | Scan code and config files for potential PII or secret leakage through logging calls | `python3` |
 | `p01-policy-guard` | `p01` | Validate plugin tool commands do not use shell binaries in strict mode | `python3` |
 | `p17-docs-no-drift` | `p17` | Run docs sync no-drift validation across managed docs and supported generators | `python3` |
 | `perf-bench` | `p20` | Compare performance baselines against current metrics and fail on budget regressions | `python3` |
@@ -91,6 +93,8 @@ flowchart LR
   G --> T_docs_sync_check
   P_default --> T_lint_unified["tool:lint-unified"]
   G --> T_lint_unified
+  P_default --> T_log_scan["tool:log-scan"]
+  G --> T_log_scan
   P_default --> T_secrets_scan["tool:secrets-scan"]
   G --> T_secrets_scan
   P_default --> T_semgrep["tool:semgrep"]
@@ -114,6 +118,7 @@ flowchart LR
   PL --> P_p17["plugin:p17"]
   P_p17 --> T_p17_docs_no_drift["tool:p17-docs-no-drift"]
   G --> T_p17_docs_no_drift
+  PL --> P_p18["plugin:p18"]
   PL --> P_p19["plugin:p19"]
   PL --> P_p20["plugin:p20"]
   P_p20 --> T_perf_bench["tool:perf-bench"]
@@ -124,6 +129,7 @@ flowchart LR
   TL --> T_diff_scope_check
   TL --> T_docs_sync_check
   TL --> T_lint_unified
+  TL --> T_log_scan
   TL --> T_p01_policy_guard
   TL --> T_p17_docs_no_drift
   TL --> T_perf_bench

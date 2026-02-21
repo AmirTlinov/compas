@@ -1,0 +1,17 @@
+[tool]
+id = "log-scan"
+description = "Scan code and config files for potential PII or secret leakage through logging calls"
+command = "python3"
+args = ["tools/custom/log-scan/scan_logs.py"]
+timeout_ms = 120000
+max_stdout_bytes = 120000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 10
+min_stdout_bytes = 20
+expect_stdout_pattern = "PII_SCAN_RESULT"
+expect_exit_codes = [0]
+
+[tool.env]
+PYTHONUNBUFFERED = "1"
