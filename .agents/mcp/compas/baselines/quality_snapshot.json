@@ -31,7 +31,7 @@
     "crates/ai-dx-mcp/src/checks/tool_budget.rs": 106,
     "crates/ai-dx-mcp/src/config.rs": 499,
     "crates/ai-dx-mcp/src/config/tests.rs": 110,
-    "crates/ai-dx-mcp/src/exceptions.rs": 391,
+    "crates/ai-dx-mcp/src/exceptions.rs": 385,
     "crates/ai-dx-mcp/src/failure_modes.rs": 149,
     "crates/ai-dx-mcp/src/gate_jobs.rs": 500,
     "crates/ai-dx-mcp/src/gate_runner.rs": 564,
@@ -146,15 +146,15 @@
     "loc_scanned": 126,
     "surface_universe": 6,
     "surface_scanned": 6,
-    "boundary_universe": 95,
-    "boundary_scanned": 95,
-    "duplicates_universe": 133,
-    "duplicates_scanned": 133
+    "boundary_universe": 103,
+    "boundary_scanned": 103,
+    "duplicates_universe": 146,
+    "duplicates_scanned": 146
   },
-  "written_at": "2026-02-21T17:06:10.583903774+00:00",
+  "written_at": "2026-02-21T18:12:28.720952344+00:00",
   "written_by": {
-    "reason": "Normalize P06 plugin folder name to lowercase p06 and refresh quality snapshot baseline.",
-    "owner": "p06"
+    "reason": "Stabilize merged plugins: remove duplicate ci_fast tool wiring and scale budgets",
+    "owner": "codex"
   },
-  "config_hash": "sha256:6b49d65a54a47be8e2bdd557aca474bd8c6357f9fc69d50ff54c924b73622f17"
+  "config_hash": "sha256:8723a7d6e12649304c2d0d5e0b421e9d3d9106a03e63dab14328cf97ce92bae4"
 }
