@@ -1,0 +1,14 @@
+[tool]
+id = "secrets-scan"
+description = "Run secrets leakage scan using semgrep, gitleaks, and trufflehog"
+command = "python3"
+args = ["scripts/p13_secrets_scan.py"]
+timeout_ms = 300000
+max_stdout_bytes = 120000
+max_stderr_bytes = 120000
+
+[tool.receipt_contract]
+min_duration_ms = 1
+min_stdout_bytes = 80
+expect_stdout_pattern = "P13-SECRETS-SCAN"
+expect_exit_codes = [0, 1, 2]

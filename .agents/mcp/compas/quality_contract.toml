@@ -41,6 +41,15 @@ diff_base = "merge-base:origin/main"
 unmapped_path_policy = "observe"
 
 [[impact.rules]]
+id = "p13-secrets-scan"
+path_globs = [
+  "tools/custom/secrets-scan/tool.toml",
+  "scripts/p13_secrets_scan.py",
+  ".agents/mcp/compas/plugins/p13/plugin.toml",
+]
+required_tools = ["secrets-scan"]
+
+[[impact.rules]]
 id = "runtime-rust"
 path_globs = ["crates/ai-dx-mcp/src/**/*.rs"]
 required_tools = ["cargo-test", "cargo-test-lite"]
