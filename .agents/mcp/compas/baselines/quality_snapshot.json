@@ -146,15 +146,15 @@
     "loc_scanned": 126,
     "surface_universe": 6,
     "surface_scanned": 6,
-    "boundary_universe": 103,
-    "boundary_scanned": 103,
-    "duplicates_universe": 146,
-    "duplicates_scanned": 146
+    "boundary_universe": 110,
+    "boundary_scanned": 110,
+    "duplicates_universe": 163,
+    "duplicates_scanned": 163
   },
-  "written_at": "2026-02-21T18:12:28.720952344+00:00",
+  "written_at": "2026-02-21T18:20:48.248792125+00:00",
   "written_by": {
-    "reason": "Stabilize merged plugins: remove duplicate ci_fast tool wiring and scale budgets",
+    "reason": "Raise per-plugin tool budget for wildcard-imported transition phase",
     "owner": "codex"
   },
-  "config_hash": "sha256:8723a7d6e12649304c2d0d5e0b421e9d3d9106a03e63dab14328cf97ce92bae4"
+  "config_hash": "sha256:0bd29d82d85b73c2ef05fc1dc95df994827145e4157306b58c46f94c56cf2b34"
 }
