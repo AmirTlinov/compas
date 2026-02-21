@@ -43,7 +43,7 @@ unmapped_path_policy = "observe"
 [[impact.rules]]
 id = "runtime-rust"
 path_globs = ["crates/ai-dx-mcp/src/**/*.rs", "crates/ai-dx-mcp/tests/**/*.rs"]
-required_tools = ["cargo-test", "cargo-test-lite", "p15-coverage"]
+required_tools = ["cargo-test", "cargo-test-lite"]
 
 [[impact.rules]]
 id = "docs-and-arch"
@@ -63,13 +63,6 @@ path_globs = [
   "tools/custom/**/*.toml",
 ]
 required_tools = ["docs-sync-check", "cargo-test"]
-
-[[impact.rules]]
-id = "release-provenance"
-path_globs = [
-  "artifacts/provenance/**/*",
-]
-required_tools = ["provenance-attestation"]
 
 [[impact.rules]]
 id = "quality-baselines"

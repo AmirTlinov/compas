@@ -1,7 +1,0 @@
-[plugin]
-id = "p17"
-description = "Docs sync no-drift checks for architecture and documentation contract health"
-tool_import_globs = ["tools/p17-docs-no-drift/tool.toml"]
-
-[gate]
-ci_fast = ["p17-docs-no-drift"]

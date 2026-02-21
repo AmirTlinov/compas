@@ -1,7 +1,0 @@
-[plugin]
-id = "p13"
-description = "Secrets Leakage Guard plugin for blocking secret exposure checks."
-tool_import_globs = []
-
-[gate]
-ci_fast = ["secrets-scan"]

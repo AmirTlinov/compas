@@ -1,8 +1,0 @@
-[plugin]
-id = "p02"
-description = "Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation"
-
-[gate]
-ci_fast = ["spec-check"]
-ci = ["spec-check"]
-flagship = ["spec-check"]

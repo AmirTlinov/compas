@@ -1,9 +1,0 @@
-[scope]
-owner = "compas"
-version = "1.0.0"
-description = "Allowed plan-to-diff scope for P03 coverage"
-
-allowed_globs = [
-  ".agents/mcp/compas/plugins/p03/**",
-  "tools/custom/diff-scope-check/**",
-]

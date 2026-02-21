@@ -246,3 +246,6 @@ include_globs = [
 exclude_globs = ["**/target/**", ".git/**"]
 baseline_path = ".agents/mcp/compas/baselines/contracts.json"
 allow_additions = true
+
+[[checks.supply_chain]]
+id = "supply-chain-main"

@@ -1,8 +1,0 @@
-[plugin]
-id = "p10"
-description = "SBOM gate plugin for dependency manifests and lockfile traceability"
-
-[gate]
-ci_fast = ["sbom"]
-ci = ["sbom"]
-flagship = ["sbom"]

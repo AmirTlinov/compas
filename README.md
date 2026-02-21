@@ -7,6 +7,14 @@
 - **compas.catalog**: единая точка просмотра plugin/tool каталога,
 - **compas.exec**: запуск tool_id с receipt/witness.
 
+## Community plugin registry
+
+Compas community plugins are maintained in a separate repository:
+- https://github.com/AmirTlinov/compas-plugin-registry
+
+Core `compas` stays focused on MCP runtime + validation/gate engine.
+Use registry plugins as external integration packs in your projects.
+
 ## ALPHA-IRON RULE
 - Никаких устаревших хвостов и режимов совместимости в коде и рабочих доках.
 - Breaking changes разрешены по умолчанию (этап глубокой альфы, пользователей нет).

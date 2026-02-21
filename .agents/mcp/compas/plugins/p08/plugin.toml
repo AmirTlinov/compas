@@ -1,7 +1,0 @@
-[plugin]
-id = "p08"
-description = "P08 staged integration: reserve plugin slot without changing active checks hash"
-tool_import_globs = []
-
-[gate]
-flagship = ["docs-sync-check"]

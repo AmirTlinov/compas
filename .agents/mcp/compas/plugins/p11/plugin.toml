@@ -1,9 +1,0 @@
-[plugin]
-id = "p11"
-description = "Provenance and attestation gate for release artifact integrity and trust."
-tool_import_globs = []
-
-[gate]
-ci_fast = ["provenance-attestation"]
-ci = ["provenance-attestation"]
-flagship = ["provenance-attestation"]

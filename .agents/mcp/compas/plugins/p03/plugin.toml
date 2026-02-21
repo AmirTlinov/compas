@@ -1,8 +1,0 @@
-[plugin]
-id = "p03"
-description = "P03 plugin enforces plan-to-diff scope consistency checks"
-
-[gate]
-ci_fast = ["diff-scope-check"]
-ci = ["diff-scope-check"]
-flagship = ["diff-scope-check"]

@@ -1,8 +1,0 @@
-[plugin]
-id = "p21"
-description = "CI/CD release-readiness enforcement for deterministic publishing"
-
-[gate]
-ci_fast = ["release-check"]
-ci = ["release-check"]
-flagship = ["release-check"]

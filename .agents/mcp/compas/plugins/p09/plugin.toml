@@ -1,6 +1,0 @@
-[plugin]
-id = "p09"
-description = "Supply-chain gate for deterministic dependency lockfiles and stable versions"
-
-[[checks.supply_chain]]
-id = "supply-chain-main"

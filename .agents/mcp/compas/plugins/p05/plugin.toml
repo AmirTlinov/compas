@@ -1,9 +1,0 @@
-[plugin]
-id = "p05"
-description = "P05 gate extension with reuse-report tool"
-
-
-[gate]
-ci_fast = ["reuse-report"]
-ci = ["reuse-report"]
-flagship = ["reuse-report"]
