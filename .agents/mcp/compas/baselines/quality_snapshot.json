@@ -146,15 +146,15 @@
     "loc_scanned": 126,
     "surface_universe": 6,
     "surface_scanned": 6,
-    "boundary_universe": 116,
-    "boundary_scanned": 116,
-    "duplicates_universe": 179,
-    "duplicates_scanned": 179
+    "boundary_universe": 95,
+    "boundary_scanned": 95,
+    "duplicates_universe": 133,
+    "duplicates_scanned": 133
   },
-  "written_at": "2026-02-21T18:26:38.611955375+00:00",
+  "written_at": "2026-02-21T15:46:22.552694496+00:00",
   "written_by": {
-    "reason": "Rebase refresh against merged plugin stack",
-    "owner": "codex"
+    "reason": "P07 ownership migration: move dead_code and orphan_api checks to plugin p07",
+    "owner": "p07"
   },
-  "config_hash": "sha256:0bd29d82d85b73c2ef05fc1dc95df994827145e4157306b58c46f94c56cf2b34"
+  "config_hash": "sha256:b366126f5ad44cd3e151f6b3100ecca42cb122074513fd7ef106abd8deadd1c6"
 }

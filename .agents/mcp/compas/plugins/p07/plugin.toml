@@ -1,0 +1,26 @@
+[plugin]
+id = "p07"
+description = "Dead code and orphan API detection"
+
+
+[[checks.dead_code]]
+id = "p07-dead-code-main"
+include_globs = [
+  "crates/ai-dx-mcp/src/checks/common.rs",
+  "crates/ai-dx-mcp/src/hash.rs",
+  "crates/ai-dx-mcp/src/repo/checks_merge.rs",
+  "crates/ai-dx-mcp/src/server_catalog.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+min_symbol_len = 8
+blocking = true
+
+[[checks.orphan_api]]
+id = "p07-orphan-api-main"
+include_globs = [
+  "crates/ai-dx-mcp/src/checks/common.rs",
+  "crates/ai-dx-mcp/src/repo/checks_merge.rs",
+]
+exclude_globs = ["**/target/**", ".git/**"]
+min_symbol_len = 8
+blocking = true

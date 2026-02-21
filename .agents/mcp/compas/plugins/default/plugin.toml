@@ -8,7 +8,7 @@ tool_import_globs = ["tools/custom/**/tool.toml"]
 allow_commands = ["semgrep"]
 
 [gate]
-ci_fast = ["docs-sync-check", "cargo-test"]
+ci_fast = ["docs-sync-check", "cargo-test", "cargo-test-lite"]
 ci = ["docs-sync-check", "cargo-test", "cargo-test-lite"]
 flagship = ["docs-sync-check", "cargo-test", "cargo-test-lite", "cargo-test-wasm"]
 
@@ -201,28 +201,6 @@ module_prefixes = ["main", "server", "server_catalog", "wasm"]
 [[checks.arch_layers.rules]]
 from_layer = "core"
 deny_to_layers = ["orchestration", "interface"]
-
-[[checks.dead_code]]
-id = "dead-code-main"
-include_globs = [
-  "crates/ai-dx-mcp/src/checks/common.rs",
-  "crates/ai-dx-mcp/src/hash.rs",
-  "crates/ai-dx-mcp/src/repo/checks_merge.rs",
-  "crates/ai-dx-mcp/src/server_catalog.rs",
-]
-exclude_globs = ["**/target/**", ".git/**"]
-min_symbol_len = 8
-blocking = false
-
-[[checks.orphan_api]]
-id = "orphan-api-main"
-include_globs = [
-  "crates/ai-dx-mcp/src/checks/common.rs",
-  "crates/ai-dx-mcp/src/repo/checks_merge.rs",
-]
-exclude_globs = ["**/target/**", ".git/**"]
-min_symbol_len = 8
-blocking = false
 
 [[checks.complexity_budget]]
 id = "complexity-main"
