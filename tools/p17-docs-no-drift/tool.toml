@@ -1,0 +1,13 @@
+[tool]
+id = "p17-docs-no-drift"
+description = "Run docs sync no-drift validation across managed docs and supported generators"
+command = "python3"
+args = ["scripts/p17_docs_no_drift.py", "--json"]
+timeout_ms = 300000
+max_stdout_bytes = 50000
+max_stderr_bytes = 50000
+
+[tool.receipt_contract]
+min_duration_ms = 100
+min_stdout_bytes = 10
+expect_exit_codes = [0]
