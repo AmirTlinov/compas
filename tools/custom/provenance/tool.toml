@@ -1,0 +1,23 @@
+[tool]
+id = "provenance-attestation"
+description = "Run provenance/attestation evidence check for release artifact supply-chain integrity."
+command = "python3"
+args = [
+  "tools/custom/provenance/provenance_attestation_gate.py",
+  "--repo-root",
+  ".",
+  "--report-root",
+  "artifacts/provenance",
+]
+timeout_ms = 120000
+max_stdout_bytes = 50000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 10
+min_stdout_bytes = 80
+expect_stdout_pattern = "\"adapter_result\""
+expect_exit_codes = [0]
+
+[tool.env]
+PYTHONUNBUFFERED = "1"

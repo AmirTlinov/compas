@@ -146,14 +146,14 @@
     "loc_scanned": 126,
     "surface_universe": 6,
     "surface_scanned": 6,
-    "boundary_universe": 110,
-    "boundary_scanned": 110,
-    "duplicates_universe": 163,
-    "duplicates_scanned": 163
+    "boundary_universe": 116,
+    "boundary_scanned": 116,
+    "duplicates_universe": 179,
+    "duplicates_scanned": 179
   },
-  "written_at": "2026-02-21T18:20:48.248792125+00:00",
+  "written_at": "2026-02-21T18:26:38.611955375+00:00",
   "written_by": {
-    "reason": "Raise per-plugin tool budget for wildcard-imported transition phase",
+    "reason": "Rebase refresh against merged plugin stack",
     "owner": "codex"
   },
   "config_hash": "sha256:0bd29d82d85b73c2ef05fc1dc95df994827145e4157306b58c46f94c56cf2b34"
