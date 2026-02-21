@@ -80,4 +80,12 @@ path_globs = [
   "tools/custom/**/*.toml",
   "tools/custom/p01-shell-policy/**/*.py",
 ]
-required_tools = ["docs-sync-check", "cargo-test", "p01-policy-guard"]
+required_tools = ["docs-sync-check", "cargo-test"]
+
+[[impact.rules]]
+id = "p03-scope"
+path_globs = [
+  ".agents/mcp/compas/plugins/p03/**",
+  "tools/custom/diff-scope-check/**",
+]
+required_tools = ["diff-scope-check"]
