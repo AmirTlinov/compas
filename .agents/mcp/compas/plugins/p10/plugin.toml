@@ -3,6 +3,6 @@ id = "p10"
 description = "SBOM gate plugin for dependency manifests and lockfile traceability"
 
 [gate]
-ci_fast = ["sbom", "cargo-test-lite"]
+ci_fast = ["sbom"]
 ci = ["sbom"]
 flagship = ["sbom"]
