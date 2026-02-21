@@ -1,0 +1,15 @@
+[tool]
+id = "p15-coverage"
+description = "Coverage non-regression check against previous quality baseline"
+command = "python3"
+args = ["tools/custom/coverage/check.py", ".agents/mcp/compas/baselines/coverage.json"]
+timeout_ms = 120000
+max_stdout_bytes = 30000
+max_stderr_bytes = 30000
+
+[tool.receipt_contract]
+min_duration_ms = 10
+min_stdout_bytes = 1
+expect_stdout_pattern = "P15 coverage non-regression"
+expect_exit_codes = [0]
+
