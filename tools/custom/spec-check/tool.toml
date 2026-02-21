@@ -1,0 +1,14 @@
+[tool]
+id = "spec-check"
+description = "Validate Spec/ADR gate artifacts (Goal, Non-goals, Acceptance, Edge-cases, Rollback) before code"
+command = "python3"
+args = ["tools/custom/spec-check/spec_check.py", "--repo-root", "."]
+timeout_ms = 120000
+max_stdout_bytes = 12000
+max_stderr_bytes = 12000
+
+[tool.receipt_contract]
+min_duration_ms = 50
+min_stdout_bytes = 1
+expect_stdout_pattern = "\"status\": \"pass\""
+expect_exit_codes = [0]

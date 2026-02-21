@@ -16,7 +16,7 @@
 Ниже auto-managed карта, синхронизация: `./dx docs-sync`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: f9173ff8da18f7b3_
+_fingerprint: 5945419495804f7d_
 
 ## Runtime Map (auto)
 
@@ -33,8 +33,8 @@ _fingerprint: f9173ff8da18f7b3_
 ### Installed plugins
 | Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
 |---|---|---|---|
-| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
-| `p01` | Paranoid Tool Policy guardrail for strict tool execution | `p01-policy-guard` | `p01-policy-guard`, `cargo-test-lite` / `p01-policy-guard` / `p01-policy-guard` |
+| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check`, `spec-check` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `p02` | Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation | — | `spec-check` / `spec-check` / `spec-check` |
 
 ### Installed tools
 | Tool | Owner plugin | Purpose | Command |
@@ -43,7 +43,7 @@ _fingerprint: f9173ff8da18f7b3_
 | `cargo-test-lite` | `default` | Cargo test (ai-dx-mcp, --no-default-features) | `cargo` |
 | `cargo-test-wasm` | `default` | Cargo test (ai-dx-mcp, wasm feature on lite profile) | `cargo` |
 | `docs-sync-check` | `default` | Verify that architecture docs and diagrams are in sync | `python3` |
-| `p01-policy-guard` | `p01` | Validate plugin tool commands do not use shell binaries in strict mode | `python3` |
+| `spec-check` | `default` | Validate Spec/ADR gate artifacts (Goal, Non-goals, Acceptance, Edge-cases, Rollback) before code | `python3` |
 
 ### MCP surface
 `compas.catalog`, `compas.exec`, `compas.gate`, `compas.init`, `compas.validate`
@@ -67,13 +67,13 @@ flowchart LR
   G --> T_cargo_test_wasm
   P_default --> T_docs_sync_check["tool:docs-sync-check"]
   G --> T_docs_sync_check
-  PL --> P_p01["plugin:p01"]
-  P_p01 --> T_p01_policy_guard["tool:p01-policy-guard"]
-  G --> T_p01_policy_guard
+  P_default --> T_spec_check["tool:spec-check"]
+  G --> T_spec_check
+  PL --> P_p02["plugin:p02"]
   TL --> T_cargo_test
   TL --> T_cargo_test_lite
   TL --> T_cargo_test_wasm
   TL --> T_docs_sync_check
-  TL --> T_p01_policy_guard
+  TL --> T_spec_check
 ```
 <!-- COMPAS_AUTO_ARCH:END -->

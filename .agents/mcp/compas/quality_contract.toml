@@ -66,6 +66,14 @@ path_globs = [
 required_tools = ["lint-unified"]
 
 [[impact.rules]]
+id = "spec-adr-gate"
+path_globs = [
+  "docs/spec/**",
+  "docs/adr/**",
+]
+required_tools = ["spec-check"]
+
+[[impact.rules]]
 id = "compas-policy"
 path_globs = [
   ".agents/mcp/compas/**/*.toml",
