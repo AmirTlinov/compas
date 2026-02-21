@@ -1,0 +1,14 @@
+[tool]
+id = "release-check"
+description = "Run release readiness checks for CI/CD stability and publish safety"
+command = "python3"
+args = ["tools/custom/release-check/release_readiness.py", "--repo-root", "."]
+timeout_ms = 180000
+max_stdout_bytes = 40000
+max_stderr_bytes = 40000
+
+[tool.receipt_contract]
+min_duration_ms = 10
+min_stdout_bytes = 100
+expect_stdout_pattern = "P21_(PASS|FAIL|ERROR)"
+expect_exit_codes = [0, 101]
