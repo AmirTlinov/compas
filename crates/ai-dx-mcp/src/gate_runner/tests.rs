@@ -24,6 +24,7 @@ fn mk_receipt(stdout_tail: &str, stderr_tail: &str) -> Receipt {
         stderr_bytes: 64,
         stdout_sha256: "a".repeat(64),
         stderr_sha256: "b".repeat(64),
+        structured_report: None,
     }
 }
 

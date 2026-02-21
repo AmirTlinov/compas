@@ -63,3 +63,15 @@ path_globs = [
   "tools/custom/**/*.toml",
 ]
 required_tools = ["docs-sync-check", "cargo-test"]
+
+[[impact.rules]]
+id = "release-provenance"
+path_globs = [
+  "artifacts/provenance/**/*",
+]
+required_tools = ["provenance-attestation"]
+
+[[impact.rules]]
+id = "quality-baselines"
+path_globs = [".agents/mcp/compas/baselines/**/*.json"]
+required_tools = ["cargo-test"]

@@ -26,6 +26,7 @@ fn tool_with_env(id: &str, env_name: &str, env_value: &str) -> ProjectTool {
         timeout_ms: None,
         max_stdout_bytes: None,
         max_stderr_bytes: None,
+        report: None,
         receipt_contract: None,
         env,
     }
