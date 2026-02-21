@@ -1,0 +1,30 @@
+[plugin]
+id = "p06"
+description = "Complexity and LOC budgets for ai-dx-mcp changes"
+
+tool_import_globs = []
+
+[gate]
+ci_fast = ["cargo-test-lite"]
+
+[[checks.loc]]
+id = "p06-loc-ai-dx-mcp"
+max_loc = 700
+include_globs = ["crates/ai-dx-mcp/src/**/*.rs", "crates/ai-dx-mcp/tests/**/*.rs"]
+exclude_globs = ["**/target/**", ".git/**", "**/tests/**"]
+baseline_path = ".agents/mcp/compas/baselines/loc.json"
+
+[[checks.complexity_budget]]
+id = "p06-complexity-ai-dx-mcp"
+include_globs = ["crates/ai-dx-mcp/src/**/*.rs", "crates/ai-dx-mcp/tests/**/*.rs"]
+exclude_globs = ["**/target/**", ".git/**"]
+max_function_lines = 600
+max_cyclomatic = 90
+max_cognitive = 300
+
+[[checks.tool_budget]]
+id = "p06-tool-budget"
+max_tools_total = 6
+max_tools_per_plugin = 8
+max_gate_tools_per_kind = 6
+max_checks_total = 22
