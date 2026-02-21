@@ -1,0 +1,14 @@
+[tool]
+id = "sbom"
+description = "Generate and validate lightweight SBOM metadata for dependency manifests"
+command = "python3"
+args = ["tools/custom/sbom/run_sbom.py", "--repo-root", "."]
+timeout_ms = 120000
+max_stdout_bytes = 20000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 1
+min_stdout_bytes = 8
+expect_stdout_pattern = "SBOM_OK"
+expect_exit_codes = [0]

@@ -97,6 +97,41 @@ path_globs = [
 required_tools = ["docs-sync-check", "cargo-test"]
 
 [[impact.rules]]
-id = "p14-junit-artifacts"
-path_globs = ["artifacts/tests/**/*.xml"]
-required_tools = ["tests-junit"]
+id = "dependency-manifests"
+path_globs = [
+  "Cargo.toml",
+  "Cargo.lock",
+  "package.json",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+  "npm-shrinkwrap.json",
+  "requirements.txt",
+  "requirements-dev.txt",
+  "pyproject.toml",
+  "poetry.lock",
+  "Pipfile",
+  "Pipfile.lock",
+  "go.mod",
+  "go.sum",
+  "go.work",
+  "go.work.sum",
+  "gradle.properties",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "Gemfile",
+  "Gemfile.lock",
+  "composer.json",
+  "composer.lock",
+  "mix.exs",
+  "mix.lock",
+  "packages.config",
+  "project.assets.json",
+]
+required_tools = ["sbom"]
+
+[[impact.rules]]
+id = "sbom-tooling"
+path_globs = ["tools/custom/sbom/**/*.py"]
+required_tools = ["sbom"]
