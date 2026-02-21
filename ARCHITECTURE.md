@@ -4,7 +4,7 @@ SSOT архитектуры проекта `compas`.
 Источник данных для карты: `scripts/docs_sync.py`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 3eef364bbbf044ea_
+_fingerprint: 1e8325672ac9ae85_
 
 ## Runtime Map (auto)
 
@@ -21,7 +21,7 @@ _fingerprint: 3eef364bbbf044ea_
 ### Installed plugins
 | Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
 |---|---|---|---|
-| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `log-scan`, `p15-coverage`, `provenance-attestation`, `reuse-report`, `sbom`, `secrets-scan`, `semgrep`, `spec-check`, `tests-junit` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `log-scan`, `p15-coverage`, `provenance-attestation`, `release-check`, `reuse-report`, `sbom`, `secrets-scan`, `semgrep`, `spec-check`, `tests-junit` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
 | `p01` | Paranoid Tool Policy guardrail for strict tool execution | `p01-policy-guard` | `p01-policy-guard`, `cargo-test-lite` / `p01-policy-guard` / `p01-policy-guard` |
 | `p02` | Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation | — | `spec-check` / `spec-check` / `spec-check` |
 | `p03` | P03 plugin enforces plan-to-diff scope consistency checks | — | `diff-scope-check` / `diff-scope-check` / `diff-scope-check` |
@@ -42,6 +42,7 @@ _fingerprint: 3eef364bbbf044ea_
 | `p18` | Prevent PII and secret leaks in logging output | — | `log-scan` / `log-scan` / `log-scan` |
 | `p19` | P19 plugin wires a unified lint gate for rust, python, and js/ts quality checks | — | `lint-unified` / `lint-unified` / `lint-unified` |
 | `p20` | Performance Regression Budget gate for AI edits and runtime-impact checks. | `perf-bench` | `perf-bench` / `perf-bench` / `perf-bench` |
+| `p21` | CI/CD release-readiness enforcement for deterministic publishing | — | `release-check` / `release-check` / `release-check` |
 
 ### Installed tools
 | Tool | Owner plugin | Purpose | Command |
@@ -58,6 +59,7 @@ _fingerprint: 3eef364bbbf044ea_
 | `p17-docs-no-drift` | `p17` | Run docs sync no-drift validation across managed docs and supported generators | `python3` |
 | `perf-bench` | `p20` | Compare performance baselines against current metrics and fail on budget regressions | `python3` |
 | `provenance-attestation` | `default` | Run provenance/attestation evidence check for release artifact supply-chain integrity. | `python3` |
+| `release-check` | `default` | Run release readiness checks for CI/CD stability and publish safety | `python3` |
 | `reuse-report` | `default` | Emit a compact JSON report for P05 rollout/hardening checks | `python3` |
 | `sbom` | `default` | Generate and validate lightweight SBOM metadata for dependency manifests | `python3` |
 | `secrets-scan` | `default` | Run secrets leakage scan using semgrep, gitleaks, and trufflehog | `python3` |
@@ -97,6 +99,8 @@ flowchart LR
   G --> T_p15_coverage
   P_default --> T_provenance_attestation["tool:provenance-attestation"]
   G --> T_provenance_attestation
+  P_default --> T_release_check["tool:release-check"]
+  G --> T_release_check
   P_default --> T_reuse_report["tool:reuse-report"]
   G --> T_reuse_report
   P_default --> T_sbom["tool:sbom"]
@@ -135,6 +139,7 @@ flowchart LR
   PL --> P_p20["plugin:p20"]
   P_p20 --> T_perf_bench["tool:perf-bench"]
   G --> T_perf_bench
+  PL --> P_p21["plugin:p21"]
   TL --> T_cargo_test
   TL --> T_cargo_test_lite
   TL --> T_cargo_test_wasm
@@ -147,6 +152,7 @@ flowchart LR
   TL --> T_p17_docs_no_drift
   TL --> T_perf_bench
   TL --> T_provenance_attestation
+  TL --> T_release_check
   TL --> T_reuse_report
   TL --> T_sbom
   TL --> T_secrets_scan
