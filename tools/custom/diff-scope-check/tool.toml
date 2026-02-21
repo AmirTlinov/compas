@@ -1,0 +1,13 @@
+[tool]
+id = "diff-scope-check"
+description = "Check changed files against the explicit scope contract for plugin P03"
+command = "python3"
+args = ["tools/custom/diff-scope-check/run.py"]
+timeout_ms = 180000
+max_stdout_bytes = 120000
+max_stderr_bytes = 120000
+
+[tool.receipt_contract]
+min_duration_ms = 1
+min_stdout_bytes = 48
+expect_exit_codes = [0]
