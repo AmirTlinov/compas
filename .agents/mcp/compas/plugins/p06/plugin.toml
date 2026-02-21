@@ -4,6 +4,9 @@ description = "Complexity and LOC budgets for ai-dx-mcp changes"
 
 tool_import_globs = []
 
+[gate]
+ci_fast = ["cargo-test-lite"]
+
 [[checks.loc]]
 id = "p06-loc-ai-dx-mcp"
 max_loc = 700
