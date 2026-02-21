@@ -1,0 +1,9 @@
+[plugin]
+id = "p12"
+description = "P12 wiring: add Semgrep security scan into gate flow"
+tool_import_globs = []
+
+[gate]
+ci_fast = ["semgrep"]
+ci = ["semgrep"]
+flagship = ["semgrep"]

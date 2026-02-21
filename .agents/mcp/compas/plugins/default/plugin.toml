@@ -4,6 +4,9 @@ description = "MVP config for developing compas MCP in this repo"
 
 tool_import_globs = ["tools/custom/**/tool.toml"]
 
+[tool_policy]
+allow_commands = ["semgrep"]
+
 [gate]
 ci_fast = ["docs-sync-check", "cargo-test"]
 ci = ["docs-sync-check", "cargo-test", "cargo-test-lite"]
