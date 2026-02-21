@@ -1,0 +1,8 @@
+[plugin]
+id = "p15"
+description = "Coverage non-regression guard for quality posture"
+
+[gate]
+ci_fast = ["p15-coverage"]
+ci = ["p15-coverage"]
+flagship = ["p15-coverage"]

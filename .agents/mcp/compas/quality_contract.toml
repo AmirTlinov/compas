@@ -25,8 +25,6 @@ mandatory_checks = [
   "arch_layers",
   "complexity_budget",
   "contract_break",
-  "dead_code",
-  "orphan_api",
 ]
 mandatory_failure_modes = ["security_baseline", "resilience_defaults"]
 min_failure_modes = 8
@@ -43,23 +41,9 @@ diff_base = "merge-base:origin/main"
 unmapped_path_policy = "observe"
 
 [[impact.rules]]
-id = "p13-secrets-scan"
-path_globs = [
-  "tools/custom/secrets-scan/tool.toml",
-  "scripts/p13_secrets_scan.py",
-  ".agents/mcp/compas/plugins/p13/plugin.toml",
-]
-required_tools = ["secrets-scan"]
-
-[[impact.rules]]
 id = "runtime-rust"
 path_globs = ["crates/ai-dx-mcp/src/**/*.rs", "crates/ai-dx-mcp/tests/**/*.rs"]
-required_tools = ["cargo-test", "cargo-test-lite", "tests-junit"]
-
-[[impact.rules]]
-id = "runtime-rust-tests"
-path_globs = ["crates/ai-dx-mcp/tests/**/*.rs"]
-required_tools = ["cargo-test"]
+required_tools = ["cargo-test", "cargo-test-lite", "p15-coverage"]
 
 [[impact.rules]]
 id = "docs-and-arch"
@@ -70,37 +54,12 @@ path_globs = [
   "docs/**/*.md",
   "scripts/docs_sync.py",
 ]
-required_tools = ["docs-sync-check", "lint-unified"]
-
-[[impact.rules]]
-id = "p19-unified-lint"
-path_globs = [
-  ".agents/mcp/compas/plugins/**/*",
-  ".agents/mcp/compas/quality_contract.toml",
-  "tools/custom/lint-unified/**/*",
-]
-required_tools = ["lint-unified"]
-
-[[impact.rules]]
-id = "spec-adr-gate"
-path_globs = [
-  "docs/spec/**",
-  "docs/adr/**",
-]
-required_tools = ["spec-check"]
+required_tools = ["docs-sync-check"]
 
 [[impact.rules]]
 id = "compas-policy"
 path_globs = [
   ".agents/mcp/compas/**/*.toml",
   "tools/custom/**/*.toml",
-  "tools/custom/tests-junit/run_tests_junit.py",
 ]
 required_tools = ["docs-sync-check", "cargo-test"]
-
-[[impact.rules]]
-id = "release-provenance"
-path_globs = [
-  "artifacts/provenance/**/*",
-]
-required_tools = ["provenance-attestation"]

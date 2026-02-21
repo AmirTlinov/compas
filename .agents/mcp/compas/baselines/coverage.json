@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "coverage_covered": 10,
+  "coverage_total": 10,
+  "coverage_percent": 100.0,
+  "written_at": "2026-02-21T00:00:00Z",
+  "written_by": {
+    "reason": "Initial P15 coverage baseline (aligned with quality_snapshot)"
+  }
+}
