@@ -1,6 +1,9 @@
 [plugin]
 id = "p22"
-description = "P22 plugin placeholder for structured reports ingestion and future adapter wiring."
+description = "Wire ci_fast impact coverage for structured report ingestion changes."
+
+[gate]
+ci_fast = ["cargo-test-lite"]
 
 [[checks.supply_chain]]
 id = "p22-supply-chain-placeholder"
