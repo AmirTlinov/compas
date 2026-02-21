@@ -4,7 +4,7 @@ SSOT архитектуры проекта `compas`.
 Источник данных для карты: `scripts/docs_sync.py`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 04a886c60240cf70_
+_fingerprint: ff4ff1d94d6dfe17_
 
 ## Runtime Map (auto)
 
@@ -21,13 +21,14 @@ _fingerprint: 04a886c60240cf70_
 ### Installed plugins
 | Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
 |---|---|---|---|
-| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `log-scan`, `secrets-scan`, `semgrep`, `spec-check`, `tests-junit` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `log-scan`, `sbom`, `secrets-scan`, `semgrep`, `spec-check`, `tests-junit` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
 | `p01` | Paranoid Tool Policy guardrail for strict tool execution | `p01-policy-guard` | `p01-policy-guard`, `cargo-test-lite` / `p01-policy-guard` / `p01-policy-guard` |
 | `p02` | Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation | — | `spec-check` / `spec-check` / `spec-check` |
 | `p03` | P03 plugin enforces plan-to-diff scope consistency checks | — | `diff-scope-check` / `diff-scope-check` / `diff-scope-check` |
 | `p06` | Complexity and LOC budgets for ai-dx-mcp changes | — | — / — / — |
 | `p08` | P08 staged integration: reserve plugin slot without changing active checks hash | — | — / — / `docs-sync-check` |
 | `p09` | Supply-chain gate for deterministic dependency lockfiles and stable versions | — | — / — / — |
+| `p10` | SBOM gate plugin for dependency manifests and lockfile traceability | — | `sbom` / `sbom` / `sbom` |
 | `p12` | P12 wiring: add Semgrep security scan into gate flow | — | `semgrep` / `semgrep` / `semgrep` |
 | `p13` | Secrets Leakage Guard plugin for blocking secret exposure checks. | — | `secrets-scan` / — / — |
 | `p14` | P14 enforces normalized JUnit-aware test execution in gate | — | `tests-junit` / `tests-junit` / `tests-junit` |
@@ -50,6 +51,7 @@ _fingerprint: 04a886c60240cf70_
 | `p01-policy-guard` | `p01` | Validate plugin tool commands do not use shell binaries in strict mode | `python3` |
 | `p17-docs-no-drift` | `p17` | Run docs sync no-drift validation across managed docs and supported generators | `python3` |
 | `perf-bench` | `p20` | Compare performance baselines against current metrics and fail on budget regressions | `python3` |
+| `sbom` | `default` | Generate and validate lightweight SBOM metadata for dependency manifests | `python3` |
 | `secrets-scan` | `default` | Run secrets leakage scan using semgrep, gitleaks, and trufflehog | `python3` |
 | `semgrep` | `default` | Run semgrep SARIF scan for security baseline findings | `semgrep` |
 | `spec-check` | `default` | Validate Spec/ADR gate artifacts (Goal, Non-goals, Acceptance, Edge-cases, Rollback) before code | `python3` |
@@ -83,6 +85,8 @@ flowchart LR
   G --> T_lint_unified
   P_default --> T_log_scan["tool:log-scan"]
   G --> T_log_scan
+  P_default --> T_sbom["tool:sbom"]
+  G --> T_sbom
   P_default --> T_secrets_scan["tool:secrets-scan"]
   G --> T_secrets_scan
   P_default --> T_semgrep["tool:semgrep"]
@@ -99,6 +103,7 @@ flowchart LR
   PL --> P_p06["plugin:p06"]
   PL --> P_p08["plugin:p08"]
   PL --> P_p09["plugin:p09"]
+  PL --> P_p10["plugin:p10"]
   PL --> P_p12["plugin:p12"]
   PL --> P_p13["plugin:p13"]
   PL --> P_p14["plugin:p14"]
@@ -121,6 +126,7 @@ flowchart LR
   TL --> T_p01_policy_guard
   TL --> T_p17_docs_no_drift
   TL --> T_perf_bench
+  TL --> T_sbom
   TL --> T_secrets_scan
   TL --> T_semgrep
   TL --> T_spec_check
