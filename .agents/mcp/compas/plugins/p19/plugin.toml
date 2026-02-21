@@ -1,0 +1,8 @@
+[plugin]
+id = "p19"
+description = "P19 plugin wires a unified lint gate for rust, python, and js/ts quality checks"
+
+[gate]
+ci_fast = ["lint-unified"]
+ci = ["lint-unified"]
+flagship = ["lint-unified"]
