@@ -25,3 +25,10 @@ description = "Default gate witness behavior for wrappers/automation."
 required = false
 default = "false"
 sensitive = false
+
+[[vars]]
+name = "NO_COLOR"
+description = "Disable ANSI colors for tools that emit machine-readable output."
+required = false
+default = "1"
+sensitive = false

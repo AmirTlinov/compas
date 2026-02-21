@@ -1,0 +1,16 @@
+[tool]
+id = "semgrep"
+description = "Run semgrep SARIF scan for security baseline findings"
+command = "semgrep"
+args = ["--config=auto", "--sarif"]
+timeout_ms = 600000
+max_stdout_bytes = 20000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 100
+min_stdout_bytes = 1
+expect_exit_codes = [0, 1]
+
+[tool.env]
+NO_COLOR = "1"
