@@ -4,7 +4,7 @@ SSOT архитектуры проекта `compas`.
 Источник данных для карты: `scripts/docs_sync.py`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 1efef80e6fdbcaba_
+_fingerprint: 9c3a0dfc65ed99c3_
 
 ## Runtime Map (auto)
 
@@ -30,6 +30,7 @@ _fingerprint: 1efef80e6fdbcaba_
 | `p09` | Supply-chain gate for deterministic dependency lockfiles and stable versions | — | — / — / — |
 | `p12` | P12 wiring: add Semgrep security scan into gate flow | — | `semgrep` / `semgrep` / `semgrep` |
 | `p16` | P16 impact-to-gate wiring for runtime Rust changes | — | `cargo-test-wasm` / — / — |
+| `p17` | Docs sync no-drift checks for architecture and documentation contract health | `p17-docs-no-drift` | `p17-docs-no-drift` / — / — |
 | `p19` | P19 plugin wires a unified lint gate for rust, python, and js/ts quality checks | — | `lint-unified` / `lint-unified` / `lint-unified` |
 
 ### Installed tools
@@ -42,6 +43,7 @@ _fingerprint: 1efef80e6fdbcaba_
 | `docs-sync-check` | `default` | Verify that architecture docs and diagrams are in sync | `python3` |
 | `lint-unified` | `default` | Run unified lint checks (clippy first, then language linters when relevant) through one gate tool | `python3` |
 | `p01-policy-guard` | `p01` | Validate plugin tool commands do not use shell binaries in strict mode | `python3` |
+| `p17-docs-no-drift` | `p17` | Run docs sync no-drift validation across managed docs and supported generators | `python3` |
 | `semgrep` | `default` | Run semgrep SARIF scan for security baseline findings | `semgrep` |
 | `spec-check` | `default` | Validate Spec/ADR gate artifacts (Goal, Non-goals, Acceptance, Edge-cases, Rollback) before code | `python3` |
 
@@ -85,6 +87,9 @@ flowchart LR
   PL --> P_p09["plugin:p09"]
   PL --> P_p12["plugin:p12"]
   PL --> P_p16["plugin:p16"]
+  PL --> P_p17["plugin:p17"]
+  P_p17 --> T_p17_docs_no_drift["tool:p17-docs-no-drift"]
+  G --> T_p17_docs_no_drift
   PL --> P_p19["plugin:p19"]
   TL --> T_cargo_test
   TL --> T_cargo_test_lite
@@ -93,6 +98,7 @@ flowchart LR
   TL --> T_docs_sync_check
   TL --> T_lint_unified
   TL --> T_p01_policy_guard
+  TL --> T_p17_docs_no_drift
   TL --> T_semgrep
   TL --> T_spec_check
 ```
