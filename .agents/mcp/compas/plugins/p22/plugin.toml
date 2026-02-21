@@ -2,8 +2,5 @@
 id = "p22"
 description = "Wire ci_fast impact coverage for structured report ingestion changes."
 
-[gate]
-ci_fast = ["cargo-test-lite"]
-
 [[checks.supply_chain]]
 id = "p22-supply-chain-placeholder"

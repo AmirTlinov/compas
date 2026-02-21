@@ -16,7 +16,7 @@
 Ниже auto-managed карта, синхронизация: `./dx docs-sync`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 1e8325672ac9ae85_
+_fingerprint: 7adb646a687b8718_
 
 ## Runtime Map (auto)
 
@@ -55,6 +55,7 @@ _fingerprint: 1e8325672ac9ae85_
 | `p19` | P19 plugin wires a unified lint gate for rust, python, and js/ts quality checks | — | `lint-unified` / `lint-unified` / `lint-unified` |
 | `p20` | Performance Regression Budget gate for AI edits and runtime-impact checks. | `perf-bench` | `perf-bench` / `perf-bench` / `perf-bench` |
 | `p21` | CI/CD release-readiness enforcement for deterministic publishing | — | `release-check` / `release-check` / `release-check` |
+| `p22` | Wire ci_fast impact coverage for structured report ingestion changes. | — | — / — / — |
 
 ### Installed tools
 | Tool | Owner plugin | Purpose | Command |
@@ -152,6 +153,7 @@ flowchart LR
   P_p20 --> T_perf_bench["tool:perf-bench"]
   G --> T_perf_bench
   PL --> P_p21["plugin:p21"]
+  PL --> P_p22["plugin:p22"]
   TL --> T_cargo_test
   TL --> T_cargo_test_lite
   TL --> T_cargo_test_wasm
