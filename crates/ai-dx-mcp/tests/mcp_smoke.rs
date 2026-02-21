@@ -81,14 +81,16 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
         .expect("call compas.catalog plugins");
     let plugins: serde_json::Value = plugins.into_typed().expect("typed compas.catalog plugins");
     assert_eq!(plugins.get("ok"), Some(&serde_json::Value::Bool(true)));
-    assert!(
-        plugins
-            .get("plugins")
-            .and_then(|v| v.as_array())
-            .is_some_and(|arr| arr
-                .iter()
-                .any(|p| p.get("id") == Some(&serde_json::Value::String("default".to_string()))))
-    );
+    let plugin_array = plugins
+        .get("plugins")
+        .and_then(|v| v.as_array())
+        .expect("plugins array");
+    let plugin_ids: Vec<&str> = plugin_array
+        .iter()
+        .filter_map(|p| p.get("id").and_then(|v| v.as_str()))
+        .collect();
+    assert!(plugin_ids.contains(&"default"));
+    assert!(plugin_ids.contains(&"p07"));
 
     let plugin_details = client
         .call_tool(CallToolRequestParams {
@@ -118,6 +120,32 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
             .and_then(|p| p.get("id"))
             .and_then(|v| v.as_str()),
         Some("default")
+    );
+
+    let plugin_details_p07 = client
+        .call_tool(CallToolRequestParams {
+            meta: None,
+            name: "compas.catalog".into(),
+            arguments: serde_json::json!({
+                "repo_root": repo_root_str,
+                "view": "plugin",
+                "plugin_id": "p07"
+            })
+            .as_object()
+            .cloned(),
+            task: None,
+        })
+        .await
+        .expect("call compas.catalog p07 plugin");
+    let plugin_details_p07: serde_json::Value = plugin_details_p07
+        .into_typed()
+        .expect("typed compas.catalog plugin");
+    assert_eq!(
+        plugin_details_p07
+            .get("plugin")
+            .and_then(|p| p.get("id"))
+            .and_then(|v| v.as_str()),
+        Some("p07")
     );
 
     let validate = client

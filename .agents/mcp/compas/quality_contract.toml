@@ -25,6 +25,8 @@ mandatory_checks = [
   "arch_layers",
   "complexity_budget",
   "contract_break",
+  "dead_code",
+  "orphan_api",
 ]
 mandatory_failure_modes = ["security_baseline", "resilience_defaults"]
 min_failure_modes = 8
