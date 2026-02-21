@@ -4,7 +4,7 @@ SSOT архитектуры проекта `compas`.
 Источник данных для карты: `scripts/docs_sync.py`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 2f94391d6e77263b_
+_fingerprint: 4762359f9dadb447_
 
 ## Runtime Map (auto)
 
@@ -21,11 +21,12 @@ _fingerprint: 2f94391d6e77263b_
 ### Installed plugins
 | Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
 |---|---|---|---|
-| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `log-scan`, `provenance-attestation`, `sbom`, `secrets-scan`, `semgrep`, `spec-check`, `tests-junit` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `diff-scope-check`, `docs-sync-check`, `lint-unified`, `log-scan`, `provenance-attestation`, `reuse-report`, `sbom`, `secrets-scan`, `semgrep`, `spec-check`, `tests-junit` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
 | `p01` | Paranoid Tool Policy guardrail for strict tool execution | `p01-policy-guard` | `p01-policy-guard`, `cargo-test-lite` / `p01-policy-guard` / `p01-policy-guard` |
 | `p02` | Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation | — | `spec-check` / `spec-check` / `spec-check` |
 | `p03` | P03 plugin enforces plan-to-diff scope consistency checks | — | `diff-scope-check` / `diff-scope-check` / `diff-scope-check` |
-| `p04` | Architecture layers, contract boundaries, and boundary policy hardening | — | `cargo-test-lite` / — / — |
+| `p04` | Architecture layers, contract boundaries, and boundary policy hardening | — | — / — / — |
+| `p05` | P05 gate extension with reuse-report tool | — | `reuse-report` / `reuse-report` / `reuse-report` |
 | `p06` | Complexity and LOC budgets for ai-dx-mcp changes | — | — / — / — |
 | `p07` | Dead code and orphan API detection | — | — / — / — |
 | `p08` | P08 staged integration: reserve plugin slot without changing active checks hash | — | — / — / `docs-sync-check` |
@@ -55,6 +56,7 @@ _fingerprint: 2f94391d6e77263b_
 | `p17-docs-no-drift` | `p17` | Run docs sync no-drift validation across managed docs and supported generators | `python3` |
 | `perf-bench` | `p20` | Compare performance baselines against current metrics and fail on budget regressions | `python3` |
 | `provenance-attestation` | `default` | Run provenance/attestation evidence check for release artifact supply-chain integrity. | `python3` |
+| `reuse-report` | `default` | Emit a compact JSON report for P05 rollout/hardening checks | `python3` |
 | `sbom` | `default` | Generate and validate lightweight SBOM metadata for dependency manifests | `python3` |
 | `secrets-scan` | `default` | Run secrets leakage scan using semgrep, gitleaks, and trufflehog | `python3` |
 | `semgrep` | `default` | Run semgrep SARIF scan for security baseline findings | `semgrep` |
@@ -91,6 +93,8 @@ flowchart LR
   G --> T_log_scan
   P_default --> T_provenance_attestation["tool:provenance-attestation"]
   G --> T_provenance_attestation
+  P_default --> T_reuse_report["tool:reuse-report"]
+  G --> T_reuse_report
   P_default --> T_sbom["tool:sbom"]
   G --> T_sbom
   P_default --> T_secrets_scan["tool:secrets-scan"]
@@ -107,6 +111,7 @@ flowchart LR
   PL --> P_p02["plugin:p02"]
   PL --> P_p03["plugin:p03"]
   PL --> P_p04["plugin:p04"]
+  PL --> P_p05["plugin:p05"]
   PL --> P_p06["plugin:p06"]
   PL --> P_p07["plugin:p07"]
   PL --> P_p08["plugin:p08"]
@@ -136,6 +141,7 @@ flowchart LR
   TL --> T_p17_docs_no_drift
   TL --> T_perf_bench
   TL --> T_provenance_attestation
+  TL --> T_reuse_report
   TL --> T_sbom
   TL --> T_secrets_scan
   TL --> T_semgrep

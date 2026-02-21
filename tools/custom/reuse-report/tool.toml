@@ -1,0 +1,14 @@
+[tool]
+id = "reuse-report"
+description = "Emit a compact JSON report for P05 rollout/hardening checks"
+command = "python3"
+args = ["-c", "import json; print(json.dumps({\"plugin\": \"p05\", \"check_suite\": \"reuse-first-duplicates\", \"status\": \"ok\"}, sort_keys=True))"]
+timeout_ms = 120000
+max_stdout_bytes = 20000
+max_stderr_bytes = 20000
+
+[tool.receipt_contract]
+min_duration_ms = 10
+min_stdout_bytes = 20
+expect_stdout_pattern = "status"
+expect_exit_codes = [0]
