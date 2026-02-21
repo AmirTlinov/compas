@@ -43,7 +43,7 @@ unmapped_path_policy = "observe"
 [[impact.rules]]
 id = "runtime-rust"
 path_globs = ["crates/ai-dx-mcp/src/**/*.rs", "crates/ai-dx-mcp/tests/**/*.rs"]
-required_tools = ["cargo-test", "cargo-test-lite"]
+required_tools = ["cargo-test", "cargo-test-lite", "lint-unified"]
 
 [[impact.rules]]
 id = "docs-and-arch"
@@ -54,7 +54,16 @@ path_globs = [
   "docs/**/*.md",
   "scripts/docs_sync.py",
 ]
-required_tools = ["docs-sync-check"]
+required_tools = ["docs-sync-check", "lint-unified"]
+
+[[impact.rules]]
+id = "p19-unified-lint"
+path_globs = [
+  ".agents/mcp/compas/plugins/**/*",
+  ".agents/mcp/compas/quality_contract.toml",
+  "tools/custom/lint-unified/**/*",
+]
+required_tools = ["lint-unified"]
 
 [[impact.rules]]
 id = "compas-policy"
