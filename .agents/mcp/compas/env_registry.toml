@@ -13,6 +13,13 @@ default = "always"
 sensitive = false
 
 [[vars]]
+name = "PYTHONUNBUFFERED"
+description = "Force Python stdio to be unbuffered for tool execution (used by log-scan)."
+required = false
+default = "1"
+sensitive = false
+
+[[vars]]
 name = "AI_DX_REPO_ROOT"
 description = "Default repo root for CLI/MCP caller when explicit repo_root is omitted."
 required = false

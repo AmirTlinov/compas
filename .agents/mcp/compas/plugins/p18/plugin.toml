@@ -1,0 +1,8 @@
+[plugin]
+id = "p18"
+description = "Prevent PII and secret leaks in logging output"
+
+[gate]
+ci_fast = ["log-scan"]
+ci = ["log-scan"]
+flagship = ["log-scan"]
