@@ -61,5 +61,6 @@ id = "compas-policy"
 path_globs = [
   ".agents/mcp/compas/**/*.toml",
   "tools/custom/**/*.toml",
+  "tools/custom/p01-shell-policy/**/*.py",
 ]
-required_tools = ["docs-sync-check", "cargo-test"]
+required_tools = ["docs-sync-check", "cargo-test", "p01-policy-guard"]
