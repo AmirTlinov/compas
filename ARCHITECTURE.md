@@ -4,7 +4,7 @@ SSOT архитектуры проекта `compas`.
 Источник данных для карты: `scripts/docs_sync.py`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: f9173ff8da18f7b3_
+_fingerprint: 454f757ff1e55938_
 
 ## Runtime Map (auto)
 
@@ -21,8 +21,14 @@ _fingerprint: f9173ff8da18f7b3_
 ### Installed plugins
 | Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
 |---|---|---|---|
-| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check`, `lint-unified`, `semgrep`, `spec-check` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
 | `p01` | Paranoid Tool Policy guardrail for strict tool execution | `p01-policy-guard` | `p01-policy-guard`, `cargo-test-lite` / `p01-policy-guard` / `p01-policy-guard` |
+| `p02` | Spec/ADR gate plugin: enforce goal, non-goals, acceptance, edge-cases and rollback before implementation | — | `spec-check` / `spec-check` / `spec-check` |
+| `p06` | Complexity and LOC budgets for ai-dx-mcp changes | — | — / — / — |
+| `p08` | P08 staged integration: reserve plugin slot without changing active checks hash | — | — / — / `docs-sync-check` |
+| `p12` | P12 wiring: add Semgrep security scan into gate flow | — | `semgrep` / `semgrep` / `semgrep` |
+| `p16` | P16 impact-to-gate wiring for runtime Rust changes | — | `cargo-test-wasm` / — / — |
+| `p19` | P19 plugin wires a unified lint gate for rust, python, and js/ts quality checks | — | `lint-unified` / `lint-unified` / `lint-unified` |
 
 ### Installed tools
 | Tool | Owner plugin | Purpose | Command |
@@ -31,7 +37,10 @@ _fingerprint: f9173ff8da18f7b3_
 | `cargo-test-lite` | `default` | Cargo test (ai-dx-mcp, --no-default-features) | `cargo` |
 | `cargo-test-wasm` | `default` | Cargo test (ai-dx-mcp, wasm feature on lite profile) | `cargo` |
 | `docs-sync-check` | `default` | Verify that architecture docs and diagrams are in sync | `python3` |
+| `lint-unified` | `default` | Run unified lint checks (clippy first, then language linters when relevant) through one gate tool | `python3` |
 | `p01-policy-guard` | `p01` | Validate plugin tool commands do not use shell binaries in strict mode | `python3` |
+| `semgrep` | `default` | Run semgrep SARIF scan for security baseline findings | `semgrep` |
+| `spec-check` | `default` | Validate Spec/ADR gate artifacts (Goal, Non-goals, Acceptance, Edge-cases, Rollback) before code | `python3` |
 
 ### MCP surface
 `compas.catalog`, `compas.exec`, `compas.gate`, `compas.init`, `compas.validate`
@@ -55,13 +64,28 @@ flowchart LR
   G --> T_cargo_test_wasm
   P_default --> T_docs_sync_check["tool:docs-sync-check"]
   G --> T_docs_sync_check
+  P_default --> T_lint_unified["tool:lint-unified"]
+  G --> T_lint_unified
+  P_default --> T_semgrep["tool:semgrep"]
+  G --> T_semgrep
+  P_default --> T_spec_check["tool:spec-check"]
+  G --> T_spec_check
   PL --> P_p01["plugin:p01"]
   P_p01 --> T_p01_policy_guard["tool:p01-policy-guard"]
   G --> T_p01_policy_guard
+  PL --> P_p02["plugin:p02"]
+  PL --> P_p06["plugin:p06"]
+  PL --> P_p08["plugin:p08"]
+  PL --> P_p12["plugin:p12"]
+  PL --> P_p16["plugin:p16"]
+  PL --> P_p19["plugin:p19"]
   TL --> T_cargo_test
   TL --> T_cargo_test_lite
   TL --> T_cargo_test_wasm
   TL --> T_docs_sync_check
+  TL --> T_lint_unified
   TL --> T_p01_policy_guard
+  TL --> T_semgrep
+  TL --> T_spec_check
 ```
 <!-- COMPAS_AUTO_ARCH:END -->
