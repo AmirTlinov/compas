@@ -103,6 +103,16 @@ fn window_exceeded_exception(
     )
 }
 
+fn fail_closed(input: &[Violation], violation: Violation) -> SuppressionResult {
+    let mut violations = Vec::with_capacity(input.len() + 1);
+    violations.push(violation);
+    violations.extend(input.iter().cloned());
+    SuppressionResult {
+        violations,
+        suppressed: vec![],
+    }
+}
+
 pub fn apply_allowlist_with_limits(
     repo_root: &Path,
     input: Vec<Violation>,
@@ -122,30 +132,26 @@ pub fn apply_allowlist_with_limits(
     let raw = match std::fs::read_to_string(&allowlist_path) {
         Ok(s) => s,
         Err(e) => {
-            let mut violations = vec![invalid(format!(
-                "failed to read allowlist {:?}: {e}",
-                allowlist_path
-            ))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!(
+                    "failed to read allowlist {:?}: {e}",
+                    allowlist_path
+                )),
+            )
         }
     };
 
     let parsed: AllowlistFile = match toml::from_str(&raw) {
         Ok(v) => v,
         Err(e) => {
-            let mut violations = vec![invalid(format!(
-                "failed to parse allowlist {:?}: {e}",
-                allowlist_path
-            ))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!(
+                    "failed to parse allowlist {:?}: {e}",
+                    allowlist_path
+                )),
+            )
         }
     };
 
@@ -163,114 +169,104 @@ pub fn apply_allowlist_with_limits(
         e.reason = e.reason.trim().to_string();
 
         if e.id.is_empty() {
-            let mut violations = vec![invalid("exception entry has empty id".to_string())];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(&input, invalid("exception entry has empty id".to_string()));
         }
         if !seen_ids.insert(e.id.clone()) {
-            let mut violations = vec![invalid(format!(
-                "duplicate exception id={} (ids must be unique)",
-                e.id
-            ))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!(
+                    "duplicate exception id={} (ids must be unique)",
+                    e.id
+                )),
+            );
         }
 
         if e.rule.is_empty() {
-            let mut violations = vec![invalid(format!("exception id={} has empty rule", e.id))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!("exception id={} has empty rule", e.id)),
+            );
         }
         if e.path.is_empty() {
-            let mut violations = vec![invalid(format!("exception id={} has empty path", e.id))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!("exception id={} has empty path", e.id)),
+            );
         }
         if !is_relative_and_safe(&e.path) {
-            let mut violations = vec![invalid(format!(
-                "exception id={} has unsafe/absolute path={}",
-                e.id, e.path
-            ))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!(
+                    "exception id={} has unsafe/absolute path={}",
+                    e.id, e.path
+                )),
+            );
         }
         if has_glob_chars(&e.path) {
-            let mut violations = vec![invalid(format!(
-                "exception id={} uses glob characters in path (globs are forbidden): {}",
-                e.id, e.path
-            ))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!(
+                    "exception id={} uses glob characters in path (globs are forbidden): {}",
+                    e.id, e.path
+                )),
+            );
         }
 
         if e.owner.is_empty() {
-            let mut violations = vec![invalid(format!("exception id={} has empty owner", e.id))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!("exception id={} has empty owner", e.id)),
+            );
         }
         if e.reason.is_empty() {
-            let mut violations = vec![invalid(format!("exception id={} has empty reason", e.id))];
-            violations.extend(input);
-            return SuppressionResult {
-                violations,
-                suppressed: vec![],
-            };
+            return fail_closed(
+                &input,
+                invalid(format!("exception id={} has empty reason", e.id)),
+            );
         }
 
-        if let Some(expires_at) = &e.expires_at {
-            let expires_at = expires_at.trim();
-            let expires_date = match NaiveDate::parse_from_str(expires_at, "%Y-%m-%d") {
-                Ok(d) => d,
-                Err(err) => {
-                    let mut violations = vec![invalid(format!(
+        let Some(expires_at) = e
+            .expires_at
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+        else {
+            return fail_closed(
+                &input,
+                invalid(format!(
+                    "exception id={} must include expires_at in YYYY-MM-DD for time-boxed suppression",
+                    e.id
+                )),
+            );
+        };
+        let expires_date = match NaiveDate::parse_from_str(expires_at, "%Y-%m-%d") {
+            Ok(d) => d,
+            Err(err) => {
+                return fail_closed(
+                    &input,
+                    invalid(format!(
                         "exception id={} has invalid expires_at={expires_at:?}: {err}",
                         e.id
-                    ))];
-                    violations.extend(input);
-                    return SuppressionResult {
-                        violations,
-                        suppressed: vec![],
-                    };
-                }
-            };
-
-            if expires_date < today {
-                expired.push(expired_exception(allowlist_rel_path, &e));
-                continue;
+                    )),
+                );
             }
+        };
 
-            if let Some(max_days) = max_exception_window_days {
-                let days_ahead = expires_date.signed_duration_since(today).num_days();
-                if days_ahead > i64::from(max_days) {
-                    expired.push(window_exceeded_exception(
-                        allowlist_rel_path,
-                        &e,
-                        max_days,
-                        days_ahead,
-                    ));
-                    continue;
-                }
+        if expires_date < today {
+            expired.push(expired_exception(allowlist_rel_path, &e));
+            continue;
+        }
+
+        if let Some(max_days) = max_exception_window_days {
+            let days_ahead = expires_date.signed_duration_since(today).num_days();
+            if days_ahead > i64::from(max_days) {
+                expired.push(window_exceeded_exception(
+                    allowlist_rel_path,
+                    &e,
+                    max_days,
+                    days_ahead,
+                ));
+                continue;
             }
         }
 
@@ -423,11 +419,10 @@ expires_at = "2999-01-01"
             Some(90),
         );
         assert!(r.suppressed.is_empty());
-        assert!(
-            r.violations
-                .iter()
-                .any(|v| v.code == "exception.window_exceeded")
-        );
+        assert!(r
+            .violations
+            .iter()
+            .any(|v| v.code == "exception.window_exceeded"));
         assert!(r.violations.iter().any(|v| v.code == "loc.max_exceeded"));
     }
 }

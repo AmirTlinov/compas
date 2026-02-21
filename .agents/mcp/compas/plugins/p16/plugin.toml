@@ -1,0 +1,6 @@
+[plugin]
+id = "p16"
+description = "P16 impact-to-gate wiring for runtime Rust changes"
+
+[gate]
+ci_fast = ["cargo-test-lite"]
