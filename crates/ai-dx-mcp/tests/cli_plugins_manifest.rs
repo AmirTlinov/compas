@@ -442,3 +442,81 @@ fn manifest_uninstall_rolls_back_when_lockfile_commit_fails() {
         "lockfile should be removed when nothing managed remains"
     );
 }
+
+#[test]
+fn manifest_doctor_detects_type_drift_and_unknown_symlink() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let repo_root = workspace.path().join("repo");
+    std::fs::create_dir_all(&repo_root).expect("mkdir repo");
+    let manifest_path = build_manifest_registry_fixture(workspace.path());
+
+    let install_args = vec![
+        "plugins".to_string(),
+        "install".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--plugins".to_string(),
+        "spec-adr-gate".to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let install = run_compas(&install_args);
+    assert!(
+        install.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&install.stdout),
+        String::from_utf8_lossy(&install.stderr)
+    );
+
+    let managed_file = repo_root.join(".agents/mcp/compas/plugins/spec-adr-gate/README.md");
+    std::fs::remove_file(&managed_file).expect("remove managed file");
+    std::fs::create_dir_all(&managed_file).expect("replace managed file with dir");
+    write_file(&managed_file.join("nested.txt"), "drift\n");
+
+    let unknown_symlink = repo_root.join(".agents/mcp/compas/plugins/spec-adr-gate/unknown.link");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("/tmp", &unknown_symlink).expect("create unknown symlink");
+    #[cfg(not(unix))]
+    write_file(&unknown_symlink, "fallback\n");
+
+    let doctor_args = vec![
+        "plugins".to_string(),
+        "doctor".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let doctor = run_compas(&doctor_args);
+    assert_eq!(
+        doctor.status.code(),
+        Some(1),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&doctor.stdout),
+        String::from_utf8_lossy(&doctor.stderr)
+    );
+    let payload: Value = serde_json::from_slice(&doctor.stdout).expect("parse doctor payload");
+    let modified = payload
+        .get("modified_files")
+        .and_then(|v| v.as_array())
+        .expect("modified_files");
+    assert!(
+        modified
+            .iter()
+            .any(|v| v.as_str() == Some(".agents/mcp/compas/plugins/spec-adr-gate/README.md")),
+        "modified_files={modified:?}"
+    );
+
+    let unknown = payload
+        .get("unknown_files")
+        .and_then(|v| v.as_array())
+        .expect("unknown_files");
+    assert!(
+        unknown.iter().any(|v| {
+            v.as_str() == Some(".agents/mcp/compas/plugins/spec-adr-gate/unknown.link")
+        }),
+        "unknown_files={unknown:?}"
+    );
+}

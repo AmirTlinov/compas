@@ -1264,12 +1264,14 @@ async fn load_verified_manifest(parsed: &PluginsCli) -> Result<ManifestResolved,
 
     if is_http_url(&registry_source) {
         manifest_bytes = fetch_url_bytes(&registry_source, 5 * 1024 * 1024).await?;
-        let sig_url = signature_source_for_manifest_source(&registry_source);
-        let sig_bytes = fetch_url_bytes(&sig_url, 512 * 1024).await?;
-        signature_b64 = Some(
-            String::from_utf8(sig_bytes)
-                .map_err(|e| format!("signature is not valid UTF-8: {e}"))?,
-        );
+        if !allow_unsigned {
+            let sig_url = signature_source_for_manifest_source(&registry_source);
+            let sig_bytes = fetch_url_bytes(&sig_url, 512 * 1024).await?;
+            signature_b64 = Some(
+                String::from_utf8(sig_bytes)
+                    .map_err(|e| format!("signature is not valid UTF-8: {e}"))?,
+            );
+        }
         base_url = extract_base_url(&registry_source);
     } else {
         let path = PathBuf::from(&registry_source);
@@ -2395,12 +2397,20 @@ fn run_plugins_doctor_manifest(
             missing.push(entry.path.clone());
             continue;
         }
-        if abs.is_file() {
+        let meta = fs::symlink_metadata(&abs)
+            .map_err(|e| format!("failed to stat {}: {e}", abs.display()))?;
+        if meta.file_type().is_symlink() {
+            modified.push(entry.path.clone());
+            continue;
+        }
+        if meta.is_file() {
             let actual = sha256_file(&abs)?;
             if actual != entry.sha256 {
                 modified.push(entry.path.clone());
             }
+            continue;
         }
+        modified.push(entry.path.clone());
     }
 
     let plugins_root = repo_root.join(".agents/mcp/compas/plugins");
