@@ -1,5 +1,6 @@
 use flate2::Compression;
 use flate2::write::GzEncoder;
+use fs4::fs_std::FileExt;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -100,6 +101,21 @@ fn run_compas_env(args: &[String], envs: &[(&str, &str)]) -> std::process::Outpu
         cmd.env(k, v);
     }
     cmd.output().expect("run compas with env")
+}
+
+fn hold_plugins_op_lock(repo_root: &Path) -> std::fs::File {
+    let lock_path = repo_root.join(".agents/mcp/compas/plugins.lock");
+    if let Some(parent) = lock_path.parent() {
+        std::fs::create_dir_all(parent).expect("mkdir lock parent");
+    }
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .expect("open lock file");
+    file.try_lock_exclusive().expect("acquire lock");
+    file
 }
 
 #[test]
@@ -518,5 +534,58 @@ fn manifest_doctor_detects_type_drift_and_unknown_symlink() {
             v.as_str() == Some(".agents/mcp/compas/plugins/spec-adr-gate/unknown.link")
         }),
         "unknown_files={unknown:?}"
+    );
+}
+
+#[test]
+fn manifest_update_fails_when_plugins_operation_lock_is_held() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let repo_root = workspace.path().join("repo");
+    std::fs::create_dir_all(&repo_root).expect("mkdir repo");
+    let manifest_path = build_manifest_registry_fixture(workspace.path());
+
+    let install_args = vec![
+        "plugins".to_string(),
+        "install".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--plugins".to_string(),
+        "spec-adr-gate".to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let install = run_compas(&install_args);
+    assert!(
+        install.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&install.stdout),
+        String::from_utf8_lossy(&install.stderr)
+    );
+
+    let lock_guard = hold_plugins_op_lock(&repo_root);
+    let update_args = vec![
+        "plugins".to_string(),
+        "update".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let blocked = run_compas(&update_args);
+    drop(lock_guard);
+
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&blocked.stdout),
+        String::from_utf8_lossy(&blocked.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&blocked.stderr);
+    assert!(
+        stderr.contains("another compas plugins operation is running"),
+        "expected lock contention error, got: {stderr}"
     );
 }
