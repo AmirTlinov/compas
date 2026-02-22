@@ -138,7 +138,7 @@ pub fn apply_allowlist_with_limits(
                     "failed to read allowlist {:?}: {e}",
                     allowlist_path
                 )),
-            )
+            );
         }
     };
 
@@ -151,7 +151,7 @@ pub fn apply_allowlist_with_limits(
                     "failed to parse allowlist {:?}: {e}",
                     allowlist_path
                 )),
-            )
+            );
         }
     };
 
@@ -419,10 +419,11 @@ expires_at = "2999-01-01"
             Some(90),
         );
         assert!(r.suppressed.is_empty());
-        assert!(r
-            .violations
-            .iter()
-            .any(|v| v.code == "exception.window_exceeded"));
+        assert!(
+            r.violations
+                .iter()
+                .any(|v| v.code == "exception.window_exceeded")
+        );
         assert!(r.violations.iter().any(|v| v.code == "loc.max_exceeded"));
     }
 }
