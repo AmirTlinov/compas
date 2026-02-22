@@ -71,6 +71,8 @@ struct RegistryPluginV1 {
     tags: Option<Vec<String>>,
     #[serde(default)]
     compat: Option<serde_json::Value>,
+    #[serde(default)]
+    deprecated: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -778,6 +780,30 @@ fn parse_csv_flag(args: &[String], flag: &str) -> Result<Option<Vec<String>>, St
 
 fn parse_bool_flag(args: &[String], flag: &str) -> bool {
     args.iter().any(|a| a == flag)
+}
+
+fn strip_manifest_only_flags(args: &[String]) -> Result<Vec<String>, String> {
+    let mut out: Vec<String> = vec![];
+    let mut i = 0usize;
+    while i < args.len() {
+        let cur = &args[i];
+        match cur.as_str() {
+            "--allow-unsigned" | "--allow-experimental" | "--allow-deprecated" => {
+                i += 1;
+            }
+            "--pubkey" => {
+                let _ = args
+                    .get(i + 1)
+                    .ok_or_else(|| "--pubkey requires a value".to_string())?;
+                i += 2;
+            }
+            _ => {
+                out.push(cur.clone());
+                i += 1;
+            }
+        }
+    }
+    Ok(out)
 }
 
 fn with_csv_flag(args: &mut Vec<String>, flag: &str, values: &[String]) {
@@ -1683,6 +1709,10 @@ fn run_plugins_list_manifest(resolved: &ManifestResolved, json: bool) -> Result<
             "aliases": plugin.aliases,
             "version": plugin.package.version,
             "tier": plugin.tier,
+            "maintainers": plugin.maintainers,
+            "tags": plugin.tags,
+            "compat": plugin.compat,
+            "deprecated": plugin.deprecated,
             "status": plugin.status,
             "description": plugin.description,
             "path": plugin.path,
@@ -1756,6 +1786,10 @@ fn run_plugins_info_manifest(resolved: &ManifestResolved, args: &[String]) -> Re
         "aliases": plugin.aliases,
         "version": plugin.package.version,
         "tier": plugin.tier,
+        "maintainers": plugin.maintainers,
+        "tags": plugin.tags,
+        "compat": plugin.compat,
+        "deprecated": plugin.deprecated,
         "status": plugin.status,
         "description": plugin.description,
         "path": plugin.path,
@@ -1772,6 +1806,41 @@ fn run_plugins_info_manifest(resolved: &ManifestResolved, args: &[String]) -> Re
     Ok(0)
 }
 
+fn governance_block_reason(
+    plugin: &RegistryPluginV1,
+    allow_experimental: bool,
+    allow_deprecated: bool,
+) -> Option<(String, String)> {
+    let deprecated_meta_present = plugin
+        .deprecated
+        .as_ref()
+        .and_then(|value| value.as_object())
+        .is_some_and(|obj| !obj.is_empty());
+    let tier = plugin
+        .tier
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    match tier.as_str() {
+        "experimental" if !allow_experimental => Some((
+            tier,
+            "install is blocked: tier=experimental (add --allow-experimental to proceed)"
+                .to_string(),
+        )),
+        "deprecated" if !allow_deprecated => Some((
+            tier,
+            "install is blocked: tier=deprecated (add --allow-deprecated to proceed)".to_string(),
+        )),
+        _ if deprecated_meta_present && !allow_deprecated => Some((
+            "deprecated".to_string(),
+            "install is blocked: deprecated metadata present (add --allow-deprecated to proceed)"
+                .to_string(),
+        )),
+        _ => None,
+    }
+}
+
 async fn run_plugins_install_manifest(
     resolved: &ManifestResolved,
     parsed: &PluginsCli,
@@ -1783,6 +1852,8 @@ async fn run_plugins_install_manifest(
     let pack_inputs = parse_csv_flag(&parsed.installer_args, "--packs")?.unwrap_or_default();
     let dry_run = parse_bool_flag(&parsed.installer_args, "--dry-run");
     let force = parse_bool_flag(&parsed.installer_args, "--force");
+    let allow_experimental = parse_bool_flag(&parsed.installer_args, "--allow-experimental");
+    let allow_deprecated = parse_bool_flag(&parsed.installer_args, "--allow-deprecated");
 
     let plugin_inputs = normalize_plugin_inputs(plugin_inputs);
     let pack_inputs = normalize_plugin_inputs(pack_inputs);
@@ -1792,6 +1863,49 @@ async fn run_plugins_install_manifest(
 
     let plugin_ids =
         resolve_plugin_ids_from_manifest(&resolved.manifest, &plugin_inputs, &pack_inputs)?;
+    let mut blocked_plugins: Vec<serde_json::Value> = vec![];
+    for pid in &plugin_ids {
+        let Some(plugin) = plugin_by_id(&resolved.manifest, pid) else {
+            return Err(format!("plugin not found in manifest: {pid}"));
+        };
+        if let Some((tier, reason)) =
+            governance_block_reason(plugin, allow_experimental, allow_deprecated)
+        {
+            blocked_plugins.push(serde_json::json!({
+                "id": plugin.id,
+                "tier": tier,
+                "reason": reason,
+            }));
+        }
+    }
+    if !blocked_plugins.is_empty() {
+        let payload = serde_json::json!({
+            "ok": false,
+            "dry_run": dry_run,
+            "force": force,
+            "blocked": true,
+            "repo_root": repo_root,
+            "registry_version": resolved.manifest.registry_version,
+            "manifest_sha256": resolved.manifest_sha256,
+            "signature_key_id": resolved.signature_key_id,
+            "plugins": plugin_ids,
+            "packs": pack_inputs,
+            "governance": {
+                "allow_experimental": allow_experimental,
+                "allow_deprecated": allow_deprecated,
+                "blocked_plugins": blocked_plugins,
+            },
+            "hint": "use --allow-experimental and/or --allow-deprecated for native registry install/update",
+            "lockfile_path": plugins_lockfile_path(&repo_root),
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload)
+                .map_err(|e| format!("failed to serialize install summary: {e}"))?
+        );
+        return Ok(1);
+    }
+
     let plugin_target_set: BTreeSet<String> = plugin_ids.iter().cloned().collect();
     let plugins_root = repo_root.join(".agents/mcp/compas/plugins");
     let existing_lockfile = read_plugins_lockfile(&repo_root)?;
@@ -2484,33 +2598,41 @@ pub(crate) async fn run_plugins_cli(parsed: &PluginsCli) -> Result<i32, String> 
         ));
     }
 
+    let legacy_args = strip_manifest_only_flags(&parsed.installer_args)?;
+    let legacy_parsed = PluginsCli {
+        action: parsed.action,
+        registry_source: parsed.registry_source.clone(),
+        repo_root: parsed.repo_root.clone(),
+        installer_args: legacy_args.clone(),
+    };
+
     match parsed.action {
         PluginsAction::Install => run_installer_status(
             &installer,
             Path::new(&parsed.repo_root),
             "install",
-            &parsed.installer_args,
+            &legacy_args,
         ),
         PluginsAction::List => run_installer_status(
             &installer,
             Path::new(&parsed.repo_root),
             "list",
-            &parsed.installer_args,
+            &legacy_args,
         ),
         PluginsAction::Packs => run_installer_status(
             &installer,
             Path::new(&parsed.repo_root),
             "packs",
-            &parsed.installer_args,
+            &legacy_args,
         ),
         PluginsAction::Info => run_installer_status(
             &installer,
             Path::new(&parsed.repo_root),
             "info",
-            &parsed.installer_args,
+            &legacy_args,
         ),
-        PluginsAction::Update => run_plugins_update(&installer, parsed),
-        PluginsAction::Uninstall => run_plugins_uninstall(&installer, parsed),
-        PluginsAction::Doctor => run_plugins_doctor(&installer, parsed),
+        PluginsAction::Update => run_plugins_update(&installer, &legacy_parsed),
+        PluginsAction::Uninstall => run_plugins_uninstall(&installer, &legacy_parsed),
+        PluginsAction::Doctor => run_plugins_doctor(&installer, &legacy_parsed),
     }
 }
