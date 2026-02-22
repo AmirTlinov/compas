@@ -152,6 +152,40 @@ fn write_file(repo_root: &std::path::Path, rel: &str) {
     std::fs::write(path, "fixture\n").expect("write fixture file");
 }
 
+fn extract_installer_argv(stdout: &[u8]) -> Vec<String> {
+    let parsed: Value = serde_json::from_slice(stdout).expect("parse installer json");
+    parsed
+        .get("argv")
+        .and_then(|v| v.as_array())
+        .expect("installer argv array")
+        .iter()
+        .map(|v| v.as_str().expect("argv string").to_string())
+        .collect()
+}
+
+fn assert_manifest_only_flags_removed(argv: &[String], pubkey: &str) {
+    assert!(
+        !argv.iter().any(|v| v == "--allow-unsigned"),
+        "legacy argv leaked --allow-unsigned: {argv:?}"
+    );
+    assert!(
+        !argv.iter().any(|v| v == "--allow-experimental"),
+        "legacy argv leaked --allow-experimental: {argv:?}"
+    );
+    assert!(
+        !argv.iter().any(|v| v == "--allow-deprecated"),
+        "legacy argv leaked --allow-deprecated: {argv:?}"
+    );
+    assert!(
+        !argv.iter().any(|v| v == "--pubkey"),
+        "legacy argv leaked --pubkey: {argv:?}"
+    );
+    assert!(
+        !argv.iter().any(|v| v == pubkey),
+        "legacy argv leaked pubkey value: {argv:?}"
+    );
+}
+
 #[test]
 fn cli_plugins_install_uses_cached_local_registry() {
     let repo_root = tempfile::tempdir().expect("temp repo");
@@ -214,6 +248,170 @@ fn cli_plugins_install_uses_cached_local_registry() {
         }
     }
     assert!(installer_found, "cached installer not found");
+}
+
+#[test]
+fn cli_plugins_legacy_installer_strips_manifest_only_flags_from_install() {
+    let repo_root = tempfile::tempdir().expect("temp repo");
+    let registry_root = tempfile::tempdir().expect("temp registry");
+    let cache_root = tempfile::tempdir().expect("temp cache");
+    write_registry_fixture(registry_root.path());
+
+    let pubkey = "/tmp/compas-test-pubkey.pem";
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let out = std::process::Command::new(bin)
+        .env("XDG_CACHE_HOME", cache_root.path())
+        .args(["plugins", "install", "--registry"])
+        .arg(registry_root.path())
+        .args(["--repo-root"])
+        .arg(repo_root.path())
+        .args([
+            "--plugins",
+            "spec-adr-gate",
+            "--allow-unsigned",
+            "--allow-experimental",
+            "--allow-deprecated",
+            "--pubkey",
+            pubkey,
+            "--dry-run",
+        ])
+        .output()
+        .expect("run plugins install");
+
+    assert!(
+        out.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let argv = extract_installer_argv(&out.stdout);
+    assert_manifest_only_flags_removed(&argv, pubkey);
+    assert!(
+        argv.iter().any(|v| v == "--plugins"),
+        "argv missing --plugins: {argv:?}"
+    );
+    assert!(
+        argv.iter().any(|v| v == "spec-adr-gate"),
+        "argv missing requested plugin id: {argv:?}"
+    );
+}
+
+#[test]
+fn cli_plugins_legacy_installer_strips_manifest_only_flags_from_update() {
+    let repo_root = tempfile::tempdir().expect("temp repo");
+    let registry_root = tempfile::tempdir().expect("temp registry");
+    let cache_root = tempfile::tempdir().expect("temp cache");
+    write_registry_fixture(registry_root.path());
+    write_registry_state(
+        repo_root.path(),
+        &serde_json::json!({
+            "registry": "compas-plugin-registry",
+            "source_root": "/tmp/fixture",
+            "plugins": ["spec-adr-gate"],
+            "packs": [],
+            "files": [".agents/mcp/compas/plugins/spec-adr-gate/plugin.toml"],
+        }),
+    );
+
+    let pubkey = "/tmp/compas-test-pubkey.pem";
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let out = std::process::Command::new(bin)
+        .env("XDG_CACHE_HOME", cache_root.path())
+        .args(["plugins", "update", "--registry"])
+        .arg(registry_root.path())
+        .args(["--repo-root"])
+        .arg(repo_root.path())
+        .args([
+            "--allow-unsigned",
+            "--allow-experimental",
+            "--allow-deprecated",
+            "--pubkey",
+            pubkey,
+            "--dry-run",
+        ])
+        .output()
+        .expect("run plugins update");
+
+    assert!(
+        out.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let argv = extract_installer_argv(&out.stdout);
+    assert_manifest_only_flags_removed(&argv, pubkey);
+    assert_eq!(argv.first().map(String::as_str), Some("install"));
+    assert!(
+        argv.iter().any(|v| v == "--plugins"),
+        "argv missing --plugins: {argv:?}"
+    );
+    assert!(
+        argv.iter().any(|v| v == "spec-adr-gate"),
+        "argv missing inferred plugin id from state: {argv:?}"
+    );
+}
+
+#[test]
+fn cli_plugins_legacy_installer_ignores_manifest_only_flags_for_list_and_info() {
+    let repo_root = tempfile::tempdir().expect("temp repo");
+    let registry_root = tempfile::tempdir().expect("temp registry");
+    let cache_root = tempfile::tempdir().expect("temp cache");
+    write_registry_fixture(registry_root.path());
+
+    let pubkey = "/tmp/compas-test-pubkey.pem";
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+
+    let list_out = std::process::Command::new(bin)
+        .env("XDG_CACHE_HOME", cache_root.path())
+        .args(["plugins", "list", "--registry"])
+        .arg(registry_root.path())
+        .args(["--repo-root"])
+        .arg(repo_root.path())
+        .args([
+            "--allow-unsigned",
+            "--allow-experimental",
+            "--allow-deprecated",
+            "--pubkey",
+            pubkey,
+            "--json",
+        ])
+        .output()
+        .expect("run plugins list");
+
+    assert!(
+        list_out.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&list_out.stdout),
+        String::from_utf8_lossy(&list_out.stderr)
+    );
+    let rows: Vec<Value> = serde_json::from_slice(&list_out.stdout).expect("parse list json");
+    assert!(!rows.is_empty());
+
+    let info_out = std::process::Command::new(bin)
+        .env("XDG_CACHE_HOME", cache_root.path())
+        .args(["plugins", "info", "--registry"])
+        .arg(registry_root.path())
+        .args(["--repo-root"])
+        .arg(repo_root.path())
+        .args([
+            "spec-adr-gate",
+            "--allow-unsigned",
+            "--allow-experimental",
+            "--allow-deprecated",
+            "--pubkey",
+            pubkey,
+        ])
+        .output()
+        .expect("run plugins info");
+
+    assert!(
+        info_out.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&info_out.stdout),
+        String::from_utf8_lossy(&info_out.stderr)
+    );
+    let payload: Value = serde_json::from_slice(&info_out.stdout).expect("parse info json");
+    assert_eq!(payload.get("id").and_then(|v| v.as_str()), Some("spec-adr-gate"));
 }
 
 #[test]
