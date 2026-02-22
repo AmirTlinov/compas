@@ -4,111 +4,28 @@ parents:
     title: "C00 — Native plugin manager v1: manifest fetch + signature verification"
     labels: ["kind:impl", "area:plugins", "area:manifest", "area:signature", "risk:critical"]
     body_file: "issues/drafts/C00_plugin_manager_manifest_verify_PARENT.md"
-    children:
-      - id: C00C1
-        title: "C00C1 — Manifest v1 model + parser + invariants"
-        labels: ["kind:impl", "area:manifest", "risk:core"]
-        body_file: "issues/drafts/C00C1_manifest_model_parser_CHILD.md"
-      - id: C00C2
-        title: "C00C2 — Offline signature verification (cosign sign-blob interop)"
-        labels: ["kind:impl", "area:signature", "kind:security", "risk:critical"]
-        body_file: "issues/drafts/C00C2_signature_verify_cosign_CHILD.md"
-      - id: C00C3
-        title: "C00C3 — Manifest fetch + cache (bounded, deterministic)"
-        labels: ["kind:impl", "area:manifest", "kind:security", "risk:enhanced"]
-        body_file: "issues/drafts/C00C3_manifest_fetch_cache_CHILD.md"
-      - id: C00C4
-        title: "C00C4 — CLI migration + help updates (manifest-based registry)"
-        labels: ["kind:impl", "area:cli", "risk:enhanced"]
-        body_file: "issues/drafts/C00C4_cli_migration_help_CHILD.md"
 
   - id: C01
     title: "C01 — Safe archive download + extraction (no system tar)"
     labels: ["kind:impl", "area:packaging", "kind:security", "risk:critical"]
     body_file: "issues/drafts/C01_safe_archive_download_extract_PARENT.md"
-    children:
-      - id: C01C1
-        title: "C01C1 — Implement safe tar.gz extractor (Rust-only)"
-        labels: ["kind:impl", "kind:security", "risk:critical"]
-        body_file: "issues/drafts/C01C1_safe_tar_extractor_CHILD.md"
-      - id: C01C2
-        title: "C01C2 — Download archive + sha256 verify before extraction"
-        labels: ["kind:impl", "kind:security", "risk:core"]
-        body_file: "issues/drafts/C01C2_archive_download_sha_verify_CHILD.md"
-      - id: C01C3
-        title: "C01C3 — Malicious archive regression tests"
-        labels: ["kind:impl", "kind:security", "risk:core"]
-        body_file: "issues/drafts/C01C3_malicious_archive_fixtures_tests_CHILD.md"
 
   - id: C02
     title: "C02 — Plugin lifecycle + lockfile v1 (install/update/uninstall/doctor)"
     labels: ["kind:impl", "area:lockfile", "area:plugins", "risk:core"]
     body_file: "issues/drafts/C02_install_lifecycle_lockfile_PARENT.md"
-    children:
-      - id: C02C1
-        title: "C02C1 — Lockfile v1 schema + read/write"
-        labels: ["kind:impl", "area:lockfile", "risk:core"]
-        body_file: "issues/drafts/C02C1_lockfile_schema_io_CHILD.md"
-      - id: C02C2
-        title: "C02C2 — Install: atomic apply + hashing + conflict detection"
-        labels: ["kind:impl", "area:plugins", "risk:core"]
-        body_file: "issues/drafts/C02C2_install_atomic_conflicts_CHILD.md"
-      - id: C02C3
-        title: "C02C3 — Update + uninstall diff (safe removals)"
-        labels: ["kind:impl", "area:plugins", "risk:enhanced"]
-        body_file: "issues/drafts/C02C3_update_uninstall_diff_CHILD.md"
-      - id: C02C4
-        title: "C02C4 — Doctor + legacy migration (.registry_state.json → lockfile)"
-        labels: ["kind:impl", "area:lockfile", "risk:enhanced"]
-        body_file: "issues/drafts/C02C4_doctor_migration_CHILD.md"
 
   - id: C03
     title: "C03 — Trust policy over tiers + pack defaults (deny-by-default)"
     labels: ["kind:impl", "kind:security", "area:plugins", "risk:enhanced"]
     body_file: "issues/drafts/C03_trust_policy_tiers_PARENT.md"
-    children:
-      - id: C03C1
-        title: "C03C1 — Enforce tier policy during install/update"
-        labels: ["kind:impl", "kind:security", "risk:enhanced"]
-        body_file: "issues/drafts/C03C1_tier_policy_enforcement_CHILD.md"
-      - id: C03C2
-        title: "C03C2 — CLI flags + output for tier/maintainers/tags"
-        labels: ["kind:impl", "area:cli", "risk:enhanced"]
-        body_file: "issues/drafts/C03C2_cli_flags_output_CHILD.md"
-      - id: C03C3
-        title: "C03C3 — Tier policy tests"
-        labels: ["kind:impl", "kind:security", "risk:enhanced"]
-        body_file: "issues/drafts/C03C3_tier_policy_tests_CHILD.md"
 
   - id: C04
     title: "C04 — Docs + UX polish for plugin manager (mass adoption)"
     labels: ["kind:docs", "area:plugins", "risk:enhanced"]
     body_file: "issues/drafts/C04_docs_ux_polish_PARENT.md"
-    children:
-      - id: C04C1
-        title: "C04C1 — Docs: plugin install guide + trust model"
-        labels: ["kind:docs", "area:plugins", "risk:enhanced"]
-        body_file: "issues/drafts/C04C1_docs_trust_install_guide_CHILD.md"
-      - id: C04C2
-        title: "C04C2 — CLI examples + troubleshooting"
-        labels: ["kind:docs", "area:cli", "risk:enhanced"]
-        body_file: "issues/drafts/C04C2_cli_examples_troubleshooting_CHILD.md"
 
   - id: C05
     title: "C05 — Tests/CI for plugin manager interop (offline fixtures)"
     labels: ["kind:impl", "kind:ci", "area:plugins", "risk:core"]
     body_file: "issues/drafts/C05_tests_ci_integration_PARENT.md"
-    children:
-      - id: C05C1
-        title: "C05C1 — Test fixtures: dev keypair + signed manifest"
-        labels: ["kind:impl", "kind:security", "risk:core"]
-        body_file: "issues/drafts/C05C1_test_fixtures_dev_key_CHILD.md"
-      - id: C05C2
-        title: "C05C2 — Integration tests: lifecycle"
-        labels: ["kind:impl", "kind:ci", "risk:core"]
-        body_file: "issues/drafts/C05C2_integration_tests_lifecycle_CHILD.md"
-      - id: C05C3
-        title: "C05C3 — Optional scheduled smoke against latest registry release"
-        labels: ["kind:ci", "risk:enhanced"]
-        body_file: "issues/drafts/C05C3_optional_scheduled_registry_smoke_CHILD.md"
-

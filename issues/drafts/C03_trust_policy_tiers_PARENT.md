@@ -29,9 +29,7 @@ Prevent “registry becomes a malware buffet” by default:
 - Packs selected via `--packs` respect tier policy.
 
 ## Child issues
-_Populated by issue publisher._
-
-## Child issues
-- [ ] #43 — C03C1 — Enforce tier policy during install/update
-- [ ] #44 — C03C2 — CLI flags + output for tier/maintainers/tags
-- [ ] #45 — C03C3 — Tier policy tests
+Use the stable IDs below (issue numbers vary by repo/time):
+- [ ] C03C1 — Enforce tier policy during install/update
+- [ ] C03C2 — CLI flags + output for tier/maintainers/tags
+- [ ] C03C3 — Tier policy tests

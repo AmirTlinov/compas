@@ -64,10 +64,8 @@ Make plugin installs reproducible and auditable:
 - Perfect merge conflict handling; we fail-closed if target files were modified outside compas ownership.
 
 ## Child issues
-_Populated by issue publisher._
-
-## Child issues
-- [ ] #38 — C02C1 — Lockfile v1 schema + read/write
-- [ ] #39 — C02C2 — Install: atomic apply + hashing + conflict detection
-- [ ] #40 — C02C3 — Update + uninstall diff (safe removals)
-- [ ] #41 — C02C4 — Doctor + legacy migration (.registry_state.json → lockfile)
+Use the stable IDs below (issue numbers vary by repo/time):
+- [ ] C02C1 — Lockfile v1 schema + read/write
+- [ ] C02C2 — Install: atomic apply + hashing + conflict detection
+- [ ] C02C3 — Update + uninstall diff (safe removals)
+- [ ] C02C4 — Doctor + legacy migration (.registry_state.json → lockfile)

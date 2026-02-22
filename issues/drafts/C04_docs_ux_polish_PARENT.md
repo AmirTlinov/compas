@@ -25,8 +25,6 @@ Make the plugin system easy to adopt:
 …without reading source code.
 
 ## Child issues
-_Populated by issue publisher._
-
-## Child issues
-- [ ] #47 — C04C1 — Docs: plugin install guide + trust model
-- [ ] #48 — C04C2 — CLI examples + troubleshooting
+Use the stable IDs below (issue numbers vary by repo/time):
+- [ ] C04C1 — Docs: plugin install guide + trust model
+- [ ] C04C2 — CLI examples + troubleshooting

@@ -43,9 +43,7 @@ Replace unsafe registry handling (system `tar`, permissive extraction) with a sa
 - Supporting zip/7z; tar.gz only.
 
 ## Child issues
-_Populated by issue publisher._
-
-## Child issues
-- [ ] #34 — C01C1 — Implement safe tar.gz extractor (Rust-only)
-- [ ] #35 — C01C2 — Download archive + sha256 verify before extraction
-- [ ] #36 — C01C3 — Malicious archive regression tests
+Use the stable IDs below (issue numbers vary by repo/time):
+- [ ] C01C1 — Implement safe tar.gz extractor (Rust-only)
+- [ ] C01C2 — Download archive + sha256 verify before extraction
+- [ ] C01C3 — Malicious archive regression tests

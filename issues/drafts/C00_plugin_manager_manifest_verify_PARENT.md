@@ -54,10 +54,8 @@ Make `compas plugins ...` secure-by-default and community scalable:
 - Per-plugin artifact distribution.
 
 ## Child issues
-_Populated by issue publisher._
-
-## Child issues
-- [ ] #29 — C00C1 — Manifest v1 model + parser + invariants
-- [ ] #30 — C00C2 — Offline signature verification (cosign sign-blob interop)
-- [ ] #31 — C00C3 — Manifest fetch + cache (bounded, deterministic)
-- [ ] #32 — C00C4 — CLI migration + help updates (manifest-based registry)
+Use the stable IDs below (issue numbers vary by repo/time):
+- [ ] C00C1 — Manifest v1 model + parser + invariants
+- [ ] C00C2 — Offline signature verification (cosign sign-blob interop)
+- [ ] C00C3 — Manifest fetch + cache (bounded, deterministic)
+- [ ] C00C4 — CLI migration + help updates (manifest-based registry)

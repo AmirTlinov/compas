@@ -23,9 +23,7 @@ Guarantee long-term correctness:
 - PR CI fails if signature verification breaks.
 
 ## Child issues
-_Populated by issue publisher._
-
-## Child issues
-- [ ] #50 — C05C1 — Test fixtures: dev keypair + signed manifest
-- [ ] #51 — C05C2 — Integration tests: lifecycle
-- [ ] #52 — C05C3 — Optional scheduled smoke against latest registry release
+Use the stable IDs below (issue numbers vary by repo/time):
+- [ ] C05C1 — Test fixtures: dev keypair + signed manifest
+- [ ] C05C2 — Integration tests: lifecycle
+- [ ] C05C3 — Optional scheduled smoke against latest registry release
