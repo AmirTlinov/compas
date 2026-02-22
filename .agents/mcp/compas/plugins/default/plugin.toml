@@ -8,7 +8,7 @@ tool_import_globs = ["tools/custom/**/tool.toml"]
 allow_commands = ["semgrep"]
 
 [gate]
-ci_fast = ["docs-sync-check", "cargo-test"]
+ci_fast = ["docs-sync-check", "cargo-test", "cargo-test-lite"]
 ci = ["docs-sync-check", "cargo-test", "cargo-test-lite"]
 flagship = ["docs-sync-check", "cargo-test", "cargo-test-lite", "cargo-test-wasm"]
 

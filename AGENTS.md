@@ -16,7 +16,7 @@
 Ниже auto-managed карта, синхронизация: `./dx docs-sync`.
 
 <!-- COMPAS_AUTO_ARCH:BEGIN -->
-_fingerprint: 677dbc361603b2f2_
+_fingerprint: 6dd594dd2f2eb48c_
 
 ## Runtime Map (auto)
 
@@ -33,7 +33,7 @@ _fingerprint: 677dbc361603b2f2_
 ### Installed plugins
 | Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
 |---|---|---|---|
-| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check` | `docs-sync-check`, `cargo-test` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
+| `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check` | `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
 
 ### Installed tools
 | Tool | Owner plugin | Purpose | Command |
