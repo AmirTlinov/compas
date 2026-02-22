@@ -3,19 +3,18 @@ use ai_dx_mcp::api::{BaselineMaintenance, GateKind, InitRequest, ValidateMode};
 #[path = "cli_plugins.rs"]
 mod plugins_impl;
 
-const DEFAULT_PLUGIN_REGISTRY_SOURCE: &str =
-    "https://github.com/AmirTlinov/compas-plugin-registry/archive/refs/heads/main.tar.gz";
+const DEFAULT_PLUGIN_REGISTRY_SOURCE: &str = "https://github.com/AmirTlinov/compas-plugin-registry/releases/latest/download/registry.manifest.v1.json";
 const PLUGIN_REGISTRY_ENV: &str = "COMPAS_PLUGIN_REGISTRY";
 
 pub(crate) fn print_help() {
     println!(
-        "Usage:\n  compas_mcp help\n  compas_mcp version\n  compas_mcp init [--apply] [--packs <builtin:...,...>] [--repo-root <path>]\n  compas_mcp validate [ratchet|strict|warn] [--write-baseline] [--baseline-reason <text>] [--baseline-owner <id>] [--repo-root <path>]\n  compas_mcp gate [ci-fast|ci|flagship] [--dry-run] [--write-witness] [--repo-root <path>]\n  compas_mcp plugins [install|update|uninstall|list|doctor] [--registry <url-or-path>] [--repo-root <path>] [-- <registry-installer-args...>]\n\nNotes:\n  - No args => start MCP server over stdio.\n  - v1-style flags --init/--validate/--gate are removed in v2.\n  - Defaults via env:\n      AI_DX_REPO_ROOT=<path>\n      AI_DX_WRITE_WITNESS=1|true\n      COMPAS_PLUGIN_REGISTRY=<url-or-path>\n\nExamples:\n  compas_mcp init --apply\n  compas_mcp validate ratchet\n  compas_mcp validate ratchet --write-baseline --baseline-reason \"Quarterly baseline refresh after policy change\" --baseline-owner team-lead\n  compas_mcp gate ci-fast --dry-run\n  compas_mcp plugins install --plugins spec-adr-gate\n  compas_mcp plugins update --registry /tmp/compas-plugin-registry.tar.gz --plugins spec-adr-gate\n"
+        "Usage:\n  compas_mcp help\n  compas_mcp version\n  compas_mcp init [--apply] [--packs <builtin:...,...>] [--repo-root <path>]\n  compas_mcp validate [ratchet|strict|warn] [--write-baseline] [--baseline-reason <text>] [--baseline-owner <id>] [--repo-root <path>]\n  compas_mcp gate [ci-fast|ci|flagship] [--dry-run] [--write-witness] [--repo-root <path>]\n  compas_mcp plugins [install|update|uninstall|list|packs|info|doctor] [--registry <url-or-path>] [--repo-root <path>] [-- <registry-installer-args...>]\n\nNotes:\n  - No args => start MCP server over stdio.\n  - v1-style flags --init/--validate/--gate are removed in v2.\n  - Defaults via env:\n      AI_DX_REPO_ROOT=<path>\n      AI_DX_WRITE_WITNESS=1|true\n      COMPAS_PLUGIN_REGISTRY=<url-or-path>\n\nExamples:\n  compas_mcp init --apply\n  compas_mcp validate ratchet\n  compas_mcp validate ratchet --write-baseline --baseline-reason \"Quarterly baseline refresh after policy change\" --baseline-owner team-lead\n  compas_mcp gate ci-fast --dry-run\n  compas_mcp plugins list -- --json\n  compas_mcp plugins packs -- --json\n  compas_mcp plugins info spec-adr-gate\n  compas_mcp plugins install --plugins spec-adr-gate\n"
     );
 }
 
 pub(crate) fn print_plugins_help() {
     println!(
-        "Usage:\n  compas_mcp plugins [install|update|uninstall|list|doctor] [--registry <url-or-path>] [--repo-root <path>] [-- <registry-installer-args...>]\n\nDefaults:\n  --registry: $COMPAS_PLUGIN_REGISTRY or {}\n  --repo-root: $AI_DX_REPO_ROOT or .\n\nExamples:\n  compas_mcp plugins list\n  compas_mcp plugins install --plugins spec-adr-gate\n  compas_mcp plugins uninstall --registry /tmp/compas-plugin-registry --plugins spec-adr-gate\n",
+        "Usage:\n  compas_mcp plugins [install|update|uninstall|list|packs|info|doctor] [--registry <url-or-path>] [--repo-root <path>] [-- <registry-installer-args...>]\n\nDefaults:\n  --registry: $COMPAS_PLUGIN_REGISTRY or {}\n  --repo-root: $AI_DX_REPO_ROOT or .\n\nNotes:\n  - Manifest-based registries use a signed JSON manifest (preferred).\n  - Legacy registries (tar.gz/dir with scripts/compas_plugins.py) are supported temporarily.\n\nExamples:\n  compas_mcp plugins list -- --json\n  compas_mcp plugins packs -- --json\n  compas_mcp plugins info spec-adr-gate\n  compas_mcp plugins install --plugins spec-adr-gate\n",
         DEFAULT_PLUGIN_REGISTRY_SOURCE
     );
 }
@@ -55,6 +54,8 @@ pub(crate) enum PluginsAction {
     Update,
     Uninstall,
     List,
+    Packs,
+    Info,
     Doctor,
 }
 
@@ -65,6 +66,8 @@ impl PluginsAction {
             "update" => Some(Self::Update),
             "uninstall" => Some(Self::Uninstall),
             "list" => Some(Self::List),
+            "packs" => Some(Self::Packs),
+            "info" => Some(Self::Info),
             "doctor" => Some(Self::Doctor),
             _ => None,
         }
@@ -81,7 +84,7 @@ pub(crate) struct PluginsCli {
 
 pub(crate) fn parse_plugins_cli(args: &[String]) -> Result<PluginsCli, String> {
     let action_raw = args.first().ok_or_else(|| {
-        "plugins requires subcommand: install|update|uninstall|list|doctor".to_string()
+        "plugins requires subcommand: install|update|uninstall|list|packs|info|doctor".to_string()
     })?;
     let action = PluginsAction::from_str(action_raw)
         .ok_or_else(|| format!("unknown plugins command: {action_raw}"))?;
