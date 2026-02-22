@@ -411,7 +411,10 @@ fn cli_plugins_legacy_installer_ignores_manifest_only_flags_for_list_and_info() 
         String::from_utf8_lossy(&info_out.stderr)
     );
     let payload: Value = serde_json::from_slice(&info_out.stdout).expect("parse info json");
-    assert_eq!(payload.get("id").and_then(|v| v.as_str()), Some("spec-adr-gate"));
+    assert_eq!(
+        payload.get("id").and_then(|v| v.as_str()),
+        Some("spec-adr-gate")
+    );
 }
 
 #[test]
