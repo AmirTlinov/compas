@@ -857,6 +857,26 @@ fn safe_relative_path(raw: &str) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+fn rollback_moved_paths(moved: &[(PathBuf, PathBuf)], repo_root: &Path) {
+    for (src, backup) in moved.iter().rev() {
+        if !backup.exists() {
+            continue;
+        }
+        if src.exists() {
+            if src.is_file() {
+                let _ = fs::remove_file(src);
+            } else {
+                let _ = fs::remove_dir_all(src);
+            }
+        }
+        if let Some(parent) = src.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::rename(backup, src);
+        prune_empty_parent_dirs(backup, repo_root);
+    }
+}
+
 fn prune_empty_parent_dirs(path: &Path, repo_root: &Path) {
     let mut cur = path.parent().map(PathBuf::from);
     while let Some(dir) = cur {
@@ -2110,7 +2130,6 @@ async fn run_plugins_update_manifest(
     parsed: &PluginsCli,
 ) -> Result<i32, String> {
     let repo_root = PathBuf::from(&parsed.repo_root);
-    let _lock = acquire_plugins_op_lock(&repo_root)?;
 
     let mut plugin_inputs =
         parse_csv_flag(&parsed.installer_args, "--plugins")?.unwrap_or_default();
@@ -2186,65 +2205,61 @@ fn run_plugins_uninstall_manifest(
     planned_remove.sort_by(|a, b| a.path.cmp(&b.path));
     kept_entries.sort_by(|a, b| a.path.cmp(&b.path));
 
-    let mut removed_files: Vec<String> = vec![];
     let mut missing_files: Vec<String> = vec![];
     let mut modified_files: Vec<String> = vec![];
+    let mut removed_files: Vec<String> = vec![];
 
-    if !dry_run {
-        // Preflight: do not mutate anything if we detect modified managed files (unless --force).
-        for entry in &planned_remove {
-            let rel = safe_relative_path(&entry.path)?;
-            let abs = repo_root.join(&rel);
-            if abs.is_file() {
-                let actual = sha256_file(&abs)?;
-                if actual != entry.sha256 && !force {
-                    modified_files.push(entry.path.clone());
-                }
+    for entry in &planned_remove {
+        let rel = safe_relative_path(&entry.path)?;
+        let abs = repo_root.join(&rel);
+        if !abs.exists() {
+            missing_files.push(entry.path.clone());
+            continue;
+        }
+        let meta = fs::symlink_metadata(&abs)
+            .map_err(|e| format!("failed to stat {}: {e}", abs.display()))?;
+        if meta.file_type().is_symlink() {
+            modified_files.push(entry.path.clone());
+            continue;
+        }
+        if meta.is_file() {
+            let actual = sha256_file(&abs)?;
+            if actual != entry.sha256 {
+                modified_files.push(entry.path.clone());
             }
+            continue;
         }
-        modified_files.sort();
-        if !modified_files.is_empty() && !force {
-            let payload = serde_json::json!({
-                "ok": false,
-                "dry_run": dry_run,
-                "repo_root": repo_root,
-                "plugins": target_plugin_ids,
-                "packs": pack_inputs,
-                "planned_remove": planned_remove.iter().map(|e| e.path.clone()).collect::<Vec<_>>(),
-                "removed_files": [],
-                "missing_files": [],
-                "modified_files": modified_files,
-                "lockfile_path": plugins_lockfile_path(&repo_root),
-                "lockfile_updated": false,
-                "force": force,
-            });
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&payload)
-                    .map_err(|e| format!("failed to serialize uninstall summary: {e}"))?
-            );
-            return Ok(1);
-        }
+        // Lockfile tracks file hashes; non-file entry means type drift.
+        modified_files.push(entry.path.clone());
+    }
+    missing_files = dedupe_strings(missing_files);
+    missing_files.sort();
+    modified_files = dedupe_strings(modified_files);
+    modified_files.sort();
 
-        for entry in &planned_remove {
-            let rel = safe_relative_path(&entry.path)?;
-            let abs = repo_root.join(&rel);
-            if !abs.exists() {
-                missing_files.push(entry.path.clone());
-                continue;
-            }
-            if abs.is_file() {
-                fs::remove_file(&abs)
-                    .map_err(|e| format!("failed to remove {}: {e}", abs.display()))?;
-                prune_empty_parent_dirs(&abs, &repo_root);
-                removed_files.push(entry.path.clone());
-            } else if abs.is_dir() {
-                fs::remove_dir_all(&abs)
-                    .map_err(|e| format!("failed to remove {}: {e}", abs.display()))?;
-                prune_empty_parent_dirs(&abs, &repo_root);
-                removed_files.push(entry.path.clone());
-            }
-        }
+    if !modified_files.is_empty() && !force {
+        let payload = serde_json::json!({
+            "ok": false,
+            "dry_run": dry_run,
+            "repo_root": repo_root,
+            "plugins": target_plugin_ids,
+            "packs": pack_inputs,
+            "planned_remove": planned_remove.iter().map(|e| e.path.clone()).collect::<Vec<_>>(),
+            "removed_files": [],
+            "missing_files": missing_files,
+            "modified_files": modified_files,
+            "lockfile_path": plugins_lockfile_path(&repo_root),
+            "lockfile_updated": false,
+            "force": force,
+            "blocked": true,
+            "hint": "run with --force to remove drifted paths",
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload)
+                .map_err(|e| format!("failed to serialize uninstall summary: {e}"))?
+        );
+        return Ok(1);
     }
 
     let mut updated = lockfile.clone();
@@ -2260,14 +2275,72 @@ fn run_plugins_uninstall_manifest(
     updated.packs = dedupe_strings(updated.packs);
 
     if !dry_run {
-        if updated.files.is_empty() && updated.plugins.is_empty() && updated.packs.is_empty() {
-            remove_plugins_lockfile(&repo_root)?;
-        } else {
-            write_plugins_lockfile(&repo_root, &updated)?;
+        let staging_root = repo_root
+            .join(".agents/mcp/compas/plugins/.staging")
+            .join(format!("uninstall-{}", op_nonce()));
+        let backups_root = staging_root.join("backups");
+        fs::create_dir_all(&backups_root)
+            .map_err(|e| format!("failed to create {}: {e}", backups_root.display()))?;
+
+        let mut moved_paths: Vec<(PathBuf, PathBuf)> = vec![];
+        for entry in &planned_remove {
+            let rel = safe_relative_path(&entry.path)?;
+            let abs = repo_root.join(&rel);
+            if !abs.exists() {
+                continue;
+            }
+            let backup = backups_root.join(&rel);
+            if let Some(parent) = backup.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("failed to create {}: {e}", parent.display()))?;
+            }
+            if backup.exists() {
+                if backup.is_file() {
+                    fs::remove_file(&backup)
+                        .map_err(|e| format!("failed to clean backup {}: {e}", backup.display()))?;
+                } else {
+                    fs::remove_dir_all(&backup)
+                        .map_err(|e| format!("failed to clean backup {}: {e}", backup.display()))?;
+                }
+            }
+            if let Err(move_err) = fs::rename(&abs, &backup) {
+                rollback_moved_paths(&moved_paths, &repo_root);
+                let _ = fs::remove_dir_all(&staging_root);
+                return Err(format!(
+                    "failed to move {} to uninstall backup {}: {move_err}",
+                    abs.display(),
+                    backup.display()
+                ));
+            }
+            moved_paths.push((abs.clone(), backup));
+            removed_files.push(entry.path.clone());
+            prune_empty_parent_dirs(&abs, &repo_root);
         }
+
+        let commit_result: Result<(), String> = (|| {
+            if std::env::var_os("COMPAS_TEST_FAIL_UNINSTALL_LOCK_COMMIT").is_some() {
+                return Err("injected failure (COMPAS_TEST_FAIL_UNINSTALL_LOCK_COMMIT)".to_string());
+            }
+            if updated.files.is_empty() && updated.plugins.is_empty() && updated.packs.is_empty() {
+                remove_plugins_lockfile(&repo_root)?;
+            } else {
+                write_plugins_lockfile(&repo_root, &updated)?;
+            }
+            Ok(())
+        })();
+        if let Err(commit_err) = commit_result {
+            rollback_moved_paths(&moved_paths, &repo_root);
+            let _ = fs::remove_dir_all(&staging_root);
+            return Err(format!(
+                "failed to persist uninstall lockfile transaction; rollback executed: {commit_err}"
+            ));
+        }
+        let _ = fs::remove_dir_all(&staging_root);
     }
 
-    let ok = modified_files.is_empty();
+    removed_files = dedupe_strings(removed_files);
+    removed_files.sort();
+    let ok = true;
     let payload = serde_json::json!({
         "ok": ok,
         "dry_run": dry_run,
@@ -2335,12 +2408,17 @@ fn run_plugins_doctor_manifest(
         for entry in WalkDir::new(&plugins_root) {
             let entry =
                 entry.map_err(|e| format!("failed to walk {}: {e}", plugins_root.display()))?;
-            if entry.file_type().is_file() {
-                let abs = entry.path().to_path_buf();
-                let rel = normalize_repo_rel_path(&repo_root, &abs)?;
-                if !locked_paths.contains(&rel) {
-                    unknown.push(rel);
-                }
+            let abs = entry.path().to_path_buf();
+            let rel = normalize_repo_rel_path(&repo_root, &abs)?;
+            if rel.starts_with(".agents/mcp/compas/plugins/.staging/") {
+                continue;
+            }
+            if entry.file_type().is_symlink() {
+                unknown.push(rel);
+                continue;
+            }
+            if entry.file_type().is_file() && !locked_paths.contains(&rel) {
+                unknown.push(rel);
             }
         }
     }

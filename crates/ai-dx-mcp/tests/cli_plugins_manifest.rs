@@ -82,10 +82,24 @@ fn build_manifest_registry_fixture(root: &Path) -> PathBuf {
 
 fn run_compas(args: &[String]) -> std::process::Output {
     let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let cache = tempfile::tempdir().expect("temp cache");
     std::process::Command::new(bin)
+        .env("XDG_CACHE_HOME", cache.path())
         .args(args)
         .output()
         .expect("run compas")
+}
+
+fn run_compas_env(args: &[String], envs: &[(&str, &str)]) -> std::process::Output {
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let cache = tempfile::tempdir().expect("temp cache");
+    let mut cmd = std::process::Command::new(bin);
+    cmd.env("XDG_CACHE_HOME", cache.path());
+    cmd.args(args);
+    for (k, v) in envs {
+        cmd.env(k, v);
+    }
+    cmd.output().expect("run compas with env")
 }
 
 #[test]
@@ -216,5 +230,215 @@ fn manifest_install_blocks_on_unmanaged_plugin_dirs_without_force() {
             .join(".agents/mcp/compas/plugins/manual-custom/README.md")
             .is_file(),
         "manual plugin dir should remain untouched after forced install"
+    );
+}
+
+#[test]
+fn manifest_update_infers_lockfile_targets_and_completes() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let repo_root = workspace.path().join("repo");
+    std::fs::create_dir_all(&repo_root).expect("mkdir repo");
+    let manifest_path = build_manifest_registry_fixture(workspace.path());
+
+    let install_args = vec![
+        "plugins".to_string(),
+        "install".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--plugins".to_string(),
+        "spec-adr-gate".to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let install = run_compas(&install_args);
+    assert!(
+        install.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&install.stdout),
+        String::from_utf8_lossy(&install.stderr)
+    );
+
+    let update_args = vec![
+        "plugins".to_string(),
+        "update".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let update = run_compas(&update_args);
+    assert!(
+        update.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&update.stdout),
+        String::from_utf8_lossy(&update.stderr)
+    );
+    let payload: Value = serde_json::from_slice(&update.stdout).expect("parse update payload");
+    let plugins = payload
+        .get("plugins")
+        .and_then(|v| v.as_array())
+        .expect("plugins array");
+    assert!(
+        plugins.iter().any(|v| v.as_str() == Some("spec-adr-gate")),
+        "plugins={plugins:?}"
+    );
+}
+
+#[test]
+fn manifest_uninstall_blocks_on_type_drift_without_force() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let repo_root = workspace.path().join("repo");
+    std::fs::create_dir_all(&repo_root).expect("mkdir repo");
+    let manifest_path = build_manifest_registry_fixture(workspace.path());
+
+    let install_args = vec![
+        "plugins".to_string(),
+        "install".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--plugins".to_string(),
+        "spec-adr-gate".to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let install = run_compas(&install_args);
+    assert!(
+        install.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&install.stdout),
+        String::from_utf8_lossy(&install.stderr)
+    );
+
+    let drift_file = repo_root.join(".agents/mcp/compas/plugins/spec-adr-gate/README.md");
+    std::fs::remove_file(&drift_file).expect("remove original file");
+    std::fs::create_dir_all(&drift_file).expect("replace managed file with directory");
+    write_file(&drift_file.join("nested.txt"), "drift payload\n");
+
+    let uninstall_args = vec![
+        "plugins".to_string(),
+        "uninstall".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--plugins".to_string(),
+        "spec-adr-gate".to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let blocked = run_compas(&uninstall_args);
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&blocked.stdout),
+        String::from_utf8_lossy(&blocked.stderr)
+    );
+    let payload: Value = serde_json::from_slice(&blocked.stdout).expect("parse uninstall payload");
+    let modified = payload
+        .get("modified_files")
+        .and_then(|v| v.as_array())
+        .expect("modified_files");
+    assert!(
+        modified
+            .iter()
+            .any(|v| v.as_str() == Some(".agents/mcp/compas/plugins/spec-adr-gate/README.md")),
+        "modified_files={modified:?}"
+    );
+    assert!(
+        drift_file.is_dir(),
+        "type-drift directory must remain after blocked uninstall"
+    );
+}
+
+#[test]
+fn manifest_uninstall_rolls_back_when_lockfile_commit_fails() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let repo_root = workspace.path().join("repo");
+    std::fs::create_dir_all(&repo_root).expect("mkdir repo");
+    let manifest_path = build_manifest_registry_fixture(workspace.path());
+
+    let install_args = vec![
+        "plugins".to_string(),
+        "install".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--plugins".to_string(),
+        "spec-adr-gate".to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+    let install = run_compas(&install_args);
+    assert!(
+        install.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&install.stdout),
+        String::from_utf8_lossy(&install.stderr)
+    );
+
+    let uninstall_args = vec![
+        "plugins".to_string(),
+        "uninstall".to_string(),
+        "--registry".to_string(),
+        manifest_path.to_string_lossy().to_string(),
+        "--repo-root".to_string(),
+        repo_root.to_string_lossy().to_string(),
+        "--plugins".to_string(),
+        "spec-adr-gate".to_string(),
+        "--allow-unsigned".to_string(),
+    ];
+
+    let injected = run_compas_env(
+        &uninstall_args,
+        &[("COMPAS_TEST_FAIL_UNINSTALL_LOCK_COMMIT", "1")],
+    );
+    assert_eq!(
+        injected.status.code(),
+        Some(1),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&injected.stdout),
+        String::from_utf8_lossy(&injected.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&injected.stderr);
+    assert!(
+        stderr.contains("rollback executed"),
+        "stderr should contain rollback marker, got: {stderr}"
+    );
+
+    // File should be restored because uninstall transaction rolled back.
+    assert!(
+        repo_root
+            .join(".agents/mcp/compas/plugins/spec-adr-gate/README.md")
+            .is_file(),
+        "managed plugin file must be restored after rollback"
+    );
+    assert!(
+        repo_root
+            .join(".agents/mcp/compas/plugins.lock.json")
+            .is_file(),
+        "lockfile must remain after rollback"
+    );
+
+    let clean = run_compas(&uninstall_args);
+    assert!(
+        clean.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&clean.stdout),
+        String::from_utf8_lossy(&clean.stderr)
+    );
+    assert!(
+        !repo_root
+            .join(".agents/mcp/compas/plugins/spec-adr-gate")
+            .exists(),
+        "plugin directory should be removed by clean uninstall"
+    );
+    assert!(
+        !repo_root
+            .join(".agents/mcp/compas/plugins.lock.json")
+            .exists(),
+        "lockfile should be removed when nothing managed remains"
     );
 }
