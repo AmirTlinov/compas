@@ -1,0 +1,31 @@
+repo: AmirTlinov/compas
+parents:
+  - id: C00
+    title: "C00 — Native plugin manager v1: manifest fetch + signature verification"
+    labels: ["kind:impl", "area:plugins", "area:manifest", "area:signature", "risk:critical"]
+    body_file: "issues/drafts/C00_plugin_manager_manifest_verify_PARENT.md"
+
+  - id: C01
+    title: "C01 — Safe archive download + extraction (no system tar)"
+    labels: ["kind:impl", "area:packaging", "kind:security", "risk:critical"]
+    body_file: "issues/drafts/C01_safe_archive_download_extract_PARENT.md"
+
+  - id: C02
+    title: "C02 — Plugin lifecycle + lockfile v1 (install/update/uninstall/doctor)"
+    labels: ["kind:impl", "area:lockfile", "area:plugins", "risk:core"]
+    body_file: "issues/drafts/C02_install_lifecycle_lockfile_PARENT.md"
+
+  - id: C03
+    title: "C03 — Trust policy over tiers + pack defaults (deny-by-default)"
+    labels: ["kind:impl", "kind:security", "area:plugins", "risk:enhanced"]
+    body_file: "issues/drafts/C03_trust_policy_tiers_PARENT.md"
+
+  - id: C04
+    title: "C04 — Docs + UX polish for plugin manager (mass adoption)"
+    labels: ["kind:docs", "area:plugins", "risk:enhanced"]
+    body_file: "issues/drafts/C04_docs_ux_polish_PARENT.md"
+
+  - id: C05
+    title: "C05 — Tests/CI for plugin manager interop (offline fixtures)"
+    labels: ["kind:impl", "kind:ci", "area:plugins", "risk:core"]
+    body_file: "issues/drafts/C05_tests_ci_integration_PARENT.md"
