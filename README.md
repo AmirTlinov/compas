@@ -20,6 +20,7 @@ Native plugin manager quickstart:
 - `ai-dx-mcp plugins install --repo-root . -- --plugins spec-adr-gate --force`
 
 Details (trust model, lockfile, drift recovery): see `docs/PLUGINS.md`.
+Project status (what’s production-ready today): `docs/STATUS.md`.
 
 ## ALPHA-IRON RULE
 - Никаких устаревших хвостов и режимов совместимости в коде и рабочих доках.
