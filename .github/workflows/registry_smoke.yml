@@ -1,0 +1,31 @@
+name: registry-smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly smoke against the latest signed community registry release.
+    # This is intentionally not a required PR check (network-dependent).
+    - cron: "0 6 * * 1"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build compas (ai-dx-mcp)
+        run: cargo build -p ai-dx-mcp
+
+      - name: Registry smoke (signed manifest, latest)
+        run: |
+          set -euo pipefail
+          ./target/debug/ai-dx-mcp plugins list -- --json >/tmp/plugins.json
+          ./target/debug/ai-dx-mcp plugins packs -- --json >/tmp/packs.json
+          ./target/debug/ai-dx-mcp plugins info spec-adr-gate >/tmp/spec.json
+

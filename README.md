@@ -15,6 +15,12 @@ Compas community plugins are maintained in a separate repository:
 Core `compas` stays focused on MCP runtime + validation/gate engine.
 Use registry plugins as external integration packs in your projects.
 
+Native plugin manager quickstart:
+- `ai-dx-mcp plugins list -- --json`
+- `ai-dx-mcp plugins install --repo-root . -- --plugins spec-adr-gate --force`
+
+Details (trust model, lockfile, drift recovery): see `docs/PLUGINS.md`.
+
 ## ALPHA-IRON RULE
 - Никаких устаревших хвостов и режимов совместимости в коде и рабочих доках.
 - Breaking changes разрешены по умолчанию (этап глубокой альфы, пользователей нет).
