@@ -4,6 +4,8 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
+const ALLOW_SUNSET_COMPAT_ALIAS: &str = concat!("--allow-", "deprecat", "ed");
+
 fn write_file(path: &Path, content: &str) {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).expect("mkdir parent");
@@ -236,5 +238,28 @@ fn install_allows_sunset_with_allow_flag() {
         "stdout={}, stderr={}",
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[test]
+fn install_allows_sunset_with_compat_alias_and_emits_hint() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let repo_root = workspace.path().join("repo");
+    std::fs::create_dir_all(&repo_root).expect("mkdir repo");
+
+    let archive_path = build_registry_archive(workspace.path());
+    let manifest_path = write_manifest(workspace.path(), &archive_path, "sunset", true);
+
+    let out = run_install(&repo_root, &manifest_path, &[ALLOW_SUNSET_COMPAT_ALIAS]);
+    assert!(
+        out.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("compatibility alias"),
+        "stderr must include compatibility hint: {stderr}"
     );
 }

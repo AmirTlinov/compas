@@ -301,27 +301,6 @@ fn verify_cosign_blob_signature(
     Ok(key_id)
 }
 
-fn source_key_for_local_path(path: &Path) -> Result<String, String> {
-    let canonical = fs::canonicalize(path)
-        .map_err(|e| format!("failed to resolve registry path {}: {e}", path.display()))?;
-    let meta = fs::metadata(&canonical)
-        .map_err(|e| format!("failed to stat registry path {}: {e}", canonical.display()))?;
-    let modified = meta
-        .modified()
-        .ok()
-        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-        .map_or(0u64, |d| d.as_secs());
-    let kind = if meta.is_dir() { "dir" } else { "file" };
-    let signature = format!(
-        "local|{}|{}|{}|{}",
-        canonical.display(),
-        kind,
-        meta.len(),
-        modified
-    );
-    Ok(sha256_hex(signature.as_bytes()))
-}
-
 fn ensure_clean_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
         fs::remove_dir_all(path)
@@ -390,43 +369,6 @@ fn acquire_plugins_op_lock(repo_root: &Path) -> Result<PluginsOpLock, String> {
     file.try_lock_exclusive()
         .map_err(|e| format!("another compas plugins operation is running ({e})"))?;
     Ok(PluginsOpLock { _file: file })
-}
-
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
-    for entry in WalkDir::new(src) {
-        let entry = entry.map_err(|e| format!("failed to walk {}: {e}", src.display()))?;
-        let path = entry.path();
-        if entry.file_type().is_symlink() {
-            return Err(format!(
-                "symlink entries are forbidden in registry sources: {}",
-                path.display()
-            ));
-        }
-        let rel = path
-            .strip_prefix(src)
-            .map_err(|e| format!("failed to relativize {}: {e}", path.display()))?;
-        let target = dst.join(rel);
-        if entry.file_type().is_dir() {
-            fs::create_dir_all(&target)
-                .map_err(|e| format!("failed to create dir {}: {e}", target.display()))?;
-            continue;
-        }
-        if entry.file_type().is_file() {
-            if let Some(parent) = target.parent() {
-                fs::create_dir_all(parent).map_err(|e| {
-                    format!("failed to create parent dir {}: {e}", parent.display())
-                })?;
-            }
-            fs::copy(path, &target).map_err(|e| {
-                format!(
-                    "failed to copy registry file {} -> {}: {e}",
-                    path.display(),
-                    target.display()
-                )
-            })?;
-        }
-    }
-    Ok(())
 }
 
 #[cfg(feature = "full")]
@@ -584,56 +526,6 @@ fn with_csv_flag(args: &mut Vec<String>, flag: &str, values: &[String]) {
     args.push(values.join(","));
 }
 
-fn parse_registry_plugin_ids(payload: &serde_json::Value) -> Result<Vec<String>, String> {
-    let rows = payload
-        .as_array()
-        .ok_or_else(|| "registry list payload is not an array".to_string())?;
-    let mut out: Vec<String> = vec![];
-    for row in rows {
-        if let Some(id) = row.get("id").and_then(|v| v.as_str()) {
-            out.push(id.to_string());
-        }
-    }
-    Ok(dedupe_strings(out))
-}
-
-fn parse_pack_plugin_ids(payload: &serde_json::Value, packs: &[String]) -> Vec<String> {
-    let mut out: Vec<String> = vec![];
-    let packs_set: BTreeSet<&str> = packs.iter().map(String::as_str).collect();
-    if let Some(rows) = payload.as_array() {
-        for row in rows {
-            let Some(pack_id) = row.get("id").and_then(|v| v.as_str()) else {
-                continue;
-            };
-            if !packs_set.contains(pack_id) {
-                continue;
-            }
-            if let Some(items) = row.get("plugins").and_then(|v| v.as_array()) {
-                for item in items {
-                    if let Some(id) = item.as_str() {
-                        out.push(id.to_string());
-                    }
-                }
-            }
-        }
-    }
-    dedupe_strings(out)
-}
-
-fn parse_install_files(payload: &serde_json::Value) -> Result<Vec<String>, String> {
-    let rows = payload
-        .get("install_files")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "registry info payload missing install_files[]".to_string())?;
-    let mut files: Vec<String> = vec![];
-    for row in rows {
-        if let Some(path) = row.as_str() {
-            files.push(path.to_string());
-        }
-    }
-    Ok(dedupe_strings(files))
-}
-
 fn safe_relative_path(raw: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(raw);
     if path.as_os_str().is_empty() {
@@ -701,23 +593,6 @@ struct ManifestResolved {
     signature_key_id: Option<String>,
     base_url: Option<String>,
     base_dir: Option<PathBuf>,
-}
-
-fn looks_like_manifest_source(registry_source: &str) -> Result<bool, String> {
-    if is_http_url(registry_source) {
-        return Ok(registry_source.ends_with(".json"));
-    }
-    let path = PathBuf::from(registry_source);
-    if path.is_file() && registry_source.ends_with(".json") {
-        return Ok(true);
-    }
-    if path.is_file() {
-        let raw = fs::read_to_string(&path)
-            .map_err(|e| format!("failed to read {}: {e}", path.display()))?;
-        let first = raw.chars().find(|c| !c.is_whitespace());
-        return Ok(first == Some('{'));
-    }
-    Ok(false)
 }
 
 fn parse_string_flag(args: &[String], flag: &str) -> Result<Option<String>, String> {
@@ -1434,8 +1309,15 @@ async fn run_plugins_install_manifest(
     let dry_run = parse_bool_flag(&parsed.installer_args, "--dry-run");
     let force = parse_bool_flag(&parsed.installer_args, "--force");
     let allow_experimental = parse_bool_flag(&parsed.installer_args, "--allow-experimental");
-    let allow_sunset = parse_bool_flag(&parsed.installer_args, FLAG_ALLOW_SUNSET)
-        || parse_bool_flag(&parsed.installer_args, FLAG_ALLOW_SUNSET_COMPAT);
+    let allow_sunset_compat = parse_bool_flag(&parsed.installer_args, FLAG_ALLOW_SUNSET_COMPAT);
+    let allow_sunset =
+        parse_bool_flag(&parsed.installer_args, FLAG_ALLOW_SUNSET) || allow_sunset_compat;
+    if allow_sunset_compat {
+        eprintln!(
+            "compas: compatibility alias `{}` is accepted for now; prefer `{}`.",
+            FLAG_ALLOW_SUNSET_COMPAT, FLAG_ALLOW_SUNSET
+        );
+    }
 
     let plugin_inputs = normalize_plugin_inputs(plugin_inputs);
     let pack_inputs = normalize_plugin_inputs(pack_inputs);
