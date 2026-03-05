@@ -205,19 +205,16 @@ fn extract_report_remediation(report: &Value) -> Vec<String> {
                     Some(format!("{title}: {}", steps.join("; ")))
                 }
             })
-            .take(MAX_REMEDIATIONS)
             .collect(),
     )
+    .into_iter()
+    .take(MAX_REMEDIATIONS)
+    .collect()
 }
 
 pub(crate) fn build_exec_envelope(out: &ToolsRunOutput) -> EvidenceEnvelope {
     let mut findings: Vec<EvidenceFinding> = vec![];
     let mut artifacts: Vec<EvidenceArtifact> = vec![];
-    let mut status = if out.ok {
-        "pass".to_string()
-    } else {
-        "blocked".to_string()
-    };
 
     if let Some(error) = &out.error {
         findings.push(EvidenceFinding {
@@ -240,12 +237,16 @@ pub(crate) fn build_exec_envelope(out: &ToolsRunOutput) -> EvidenceEnvelope {
                 path: None,
                 tier: ViolationTier::Blocking,
             });
-            status = "blocked".to_string();
         }
     }
 
     findings.truncate(MAX_FINDINGS);
     let blocking = blocking_from_findings(&findings) || !out.ok;
+    let status = if blocking {
+        "blocked".to_string()
+    } else {
+        "pass".to_string()
+    };
     let report_summary = out
         .receipt
         .as_ref()
@@ -353,22 +354,25 @@ pub(crate) fn build_gate_envelope(out: &GateOutput) -> EvidenceEnvelope {
     }
 
     findings.truncate(MAX_FINDINGS);
-    let status = out
-        .verdict
-        .as_ref()
-        .map(|v| match v.decision.status {
-            crate::api::DecisionStatus::Pass => "pass".to_string(),
-            crate::api::DecisionStatus::Retryable => "retryable".to_string(),
-            crate::api::DecisionStatus::Blocked => "blocked".to_string(),
-        })
-        .unwrap_or_else(|| {
-            if out.ok {
-                "pass".to_string()
-            } else {
-                "blocked".to_string()
-            }
-        });
     let blocking = blocking_from_findings(&findings) || !out.ok;
+    let status = if blocking {
+        "blocked".to_string()
+    } else {
+        out.verdict
+            .as_ref()
+            .map(|v| match v.decision.status {
+                crate::api::DecisionStatus::Pass => "pass".to_string(),
+                crate::api::DecisionStatus::Retryable => "retryable".to_string(),
+                crate::api::DecisionStatus::Blocked => "blocked".to_string(),
+            })
+            .unwrap_or_else(|| {
+                if out.ok {
+                    "pass".to_string()
+                } else {
+                    "blocked".to_string()
+                }
+            })
+    };
     let summary = if let Some(report_summary) = primary_report_summary {
         let top_findings = if report_summary.top_findings.is_empty() {
             find_top_codes(&findings)
@@ -616,5 +620,56 @@ mod tests {
             envelope.remediation,
             vec!["Clean up lint: Remove unused import; Rerun lint".to_string()]
         );
+    }
+
+    #[test]
+    fn build_exec_envelope_blocks_when_structured_report_is_blocking_even_if_out_ok() {
+        let out = ToolsRunOutput {
+            ok: true,
+            error: None,
+            repo_root: ".".to_string(),
+            receipt: Some(mk_receipt_with_report(serde_json::json!({
+                "findings": [
+                    { "code": "lint.blocker", "severity": "high", "message": "Fix me" }
+                ]
+            }))),
+            summary_md: None,
+            evidence: EvidenceEnvelope::default(),
+            payload_meta: None,
+        };
+
+        let envelope = build_exec_envelope(&out);
+        assert_eq!(envelope.status, "blocked");
+        assert!(envelope.blocking);
+    }
+
+    #[test]
+    fn build_gate_envelope_blocks_when_report_findings_are_blocking_without_verdict() {
+        let out = GateOutput {
+            ok: true,
+            error: None,
+            repo_root: ".".to_string(),
+            kind: GateKind::CiFast,
+            validate: mk_validate(),
+            receipts: vec![mk_receipt_with_report(serde_json::json!({
+                "findings": [
+                    { "code": "lint.blocker", "severity": "high", "message": "Fix me" }
+                ]
+            }))],
+            witness_path: None,
+            witness: None,
+            verdict: None,
+            agent_digest: None,
+            summary_md: None,
+            evidence: EvidenceEnvelope::default(),
+            payload_meta: None,
+            job: None,
+            job_state: None,
+            job_error: None,
+        };
+
+        let envelope = build_gate_envelope(&out);
+        assert_eq!(envelope.status, "blocked");
+        assert!(envelope.blocking);
     }
 }
