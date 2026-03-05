@@ -46,7 +46,7 @@ Compas supports native plugin installs from a **signed registry manifest v1**:
   - drift detection + fail‑closed installs/updates/uninstalls unless `--force`
 - governance policy:
   - blocks `tier=experimental` unless `--allow-experimental`
-  - blocks `tier=deprecated` (or deprecated metadata) unless `--allow-deprecated`
+  - blocks `tier=sunset` (or sunset marker metadata) unless `--allow-sunset`
 
 Usage docs:
 - `docs/PLUGINS.md`
@@ -76,4 +76,3 @@ If you run AI‑only development:
 - Keep `ci_fast` deterministic and cheap.
 - Use `gate` for “proof of work” (receipts + witness).
 - Treat plugin installs as **policy changes**; pin registry versions for CI/reproducibility.
-
