@@ -19,6 +19,7 @@ fn init_req() -> InitRequest {
     InitRequest {
         repo_root: None,
         apply: Some(false),
+        profile: None,
         packs: None,
         external_packs: None,
     }
@@ -276,8 +277,7 @@ fn init_apply_is_idempotent_and_validate_ok() {
         InitRequest {
             repo_root: Some(repo_root.clone()),
             apply: Some(true),
-            packs: None,
-            external_packs: None,
+            ..init_req()
         },
     );
     assert!(out1.ok, "out1 ok=false; error={:?}", out1.error);
@@ -288,8 +288,7 @@ fn init_apply_is_idempotent_and_validate_ok() {
         InitRequest {
             repo_root: Some(repo_root.clone()),
             apply: Some(true),
-            packs: None,
-            external_packs: None,
+            ..init_req()
         },
     );
     assert!(out2.ok, "out2 ok=false; error={:?}", out2.error);
@@ -321,8 +320,7 @@ fn init_apply_fails_closed_on_conflicting_existing_file() {
         InitRequest {
             repo_root: Some(repo_root.clone()),
             apply: Some(true),
-            packs: None,
-            external_packs: None,
+            ..init_req()
         },
     );
     assert!(!out.ok, "expected ok=false");
@@ -424,8 +422,7 @@ fn init_e2e_polyglot_validate_then_gate_ci_fast_dry_run_ok() {
         InitRequest {
             repo_root: Some(repo_root.clone()),
             apply: Some(true),
-            packs: None,
-            external_packs: None,
+            ..init_req()
         },
     );
     assert!(out.ok, "init ok=false; error={:?}", out.error);

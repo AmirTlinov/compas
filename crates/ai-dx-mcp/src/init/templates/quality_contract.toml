@@ -1,0 +1,28 @@
+# Compas Sentinel v1 — quality policy contract
+
+[quality]
+min_trust_score = 60
+allow_trust_drop = false
+allow_coverage_drop = false
+max_weighted_risk_increase = 0
+
+[exceptions]
+max_exceptions = 10
+max_suppressed_ratio = 0.30
+max_exception_window_days = 90
+
+[receipt_defaults]
+min_duration_ms = 500
+min_stdout_bytes = 10
+
+[governance]
+mandatory_checks = ["supply_chain", "loc", "tool_budget"]
+mandatory_failure_modes = []
+min_failure_modes = 1
+
+[proof]
+require_witness = true
+
+[baseline]
+snapshot_path = ".agents/mcp/compas/baselines/quality_snapshot.json"
+max_scope_narrowing = 0.10

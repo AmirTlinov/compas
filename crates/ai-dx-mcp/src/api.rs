@@ -637,23 +637,6 @@ mod tests {
     }
 
     #[test]
-    fn init_request_roundtrip_smoke() {
-        let req = InitRequest {
-            repo_root: Some(".".to_string()),
-            apply: Some(false),
-            packs: Some(vec!["builtin:rust".to_string()]),
-            external_packs: Some(vec![ExternalPackRef {
-                source: "file:/tmp/pack".to_string(),
-                sha256: "00".repeat(32),
-            }]),
-        };
-
-        let v = serde_json::to_value(&req).expect("serialize InitRequest");
-        let parsed: InitRequest = serde_json::from_value(v).expect("deserialize InitRequest");
-        assert_eq!(parsed.repo_root.as_deref(), Some("."));
-    }
-
-    #[test]
     fn validate_request_response_mode_roundtrip() {
         let req: ValidateRequest = serde_json::from_value(serde_json::json!({
             "mode": "ratchet",

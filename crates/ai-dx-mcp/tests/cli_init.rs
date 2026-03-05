@@ -108,8 +108,129 @@ fn cli_help_prints_usage() {
     );
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(stdout.contains("Usage:"), "stdout={stdout}");
+    assert!(stdout.contains("--profile <ai_first>"), "stdout={stdout}");
     assert!(stdout.contains("validate"), "stdout={stdout}");
     assert!(stdout.contains("AI_DX_REPO_ROOT"), "stdout={stdout}");
+}
+
+#[test]
+fn cli_init_ai_first_profile_dry_run_plans_docs_without_writing() {
+    let dir = tempfile::tempdir().expect("temp repo");
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("write Cargo.toml");
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--profile", "ai_first", "--repo-root"])
+        .arg(dir.path())
+        .output()
+        .expect("run init --profile ai_first");
+    assert!(
+        out.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let parsed: InitOutput = serde_json::from_slice(&out.stdout).expect("parse InitOutput");
+    let plan = parsed.plan.expect("plan");
+    assert!(plan.writes.iter().any(|w| w.path == "AGENTS.md"));
+    assert!(
+        !dir.path().join("AGENTS.md").exists(),
+        "dry-run must not write scaffold files"
+    );
+}
+
+#[test]
+fn cli_init_ai_first_profile_scaffolds_repo_visible_docs() {
+    let dir = tempfile::tempdir().expect("temp repo");
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("write Cargo.toml");
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--apply", "--profile", "ai_first", "--repo-root"])
+        .arg(dir.path())
+        .output()
+        .expect("run init --apply --profile ai_first");
+    assert!(
+        out.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let parsed: InitOutput = serde_json::from_slice(&out.stdout).expect("parse InitOutput");
+    assert!(parsed.ok, "ok=false; error={:?}", parsed.error);
+    for rel in [
+        "AGENTS.md",
+        "ARCHITECTURE.md",
+        "docs/index.md",
+        "docs/exec-plans/README.md",
+        "docs/QUALITY_SCORE.md",
+    ] {
+        assert!(dir.path().join(rel).is_file(), "{rel} not created");
+    }
+}
+
+#[test]
+fn cli_init_ai_first_profile_apply_fails_closed_on_existing_conflicting_doc() {
+    let dir = tempfile::tempdir().expect("temp repo");
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("write Cargo.toml");
+    std::fs::write(dir.path().join("AGENTS.md"), "existing\n").expect("write AGENTS.md");
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--apply", "--profile", "ai_first", "--repo-root"])
+        .arg(dir.path())
+        .output()
+        .expect("run init --apply --profile ai_first");
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "stdout={}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    let parsed: InitOutput = serde_json::from_slice(&out.stdout).expect("parse InitOutput");
+    assert!(!parsed.ok, "expected ok=false");
+    assert_eq!(
+        parsed.error.as_ref().map(|e| e.code.as_str()),
+        Some("init.write_conflict")
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("AGENTS.md")).unwrap(),
+        "existing\n"
+    );
+}
+
+#[test]
+fn cli_init_rejects_unknown_profile() {
+    let dir = tempfile::tempdir().expect("temp repo");
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("write Cargo.toml");
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--profile", "unknown", "--repo-root"])
+        .arg(dir.path())
+        .output()
+        .expect("run init --profile unknown");
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "stdout={}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    let parsed: InitOutput = serde_json::from_slice(&out.stdout).expect("parse InitOutput");
+    assert_eq!(
+        parsed.error.as_ref().map(|e| e.code.as_str()),
+        Some("init.unknown_profile")
+    );
 }
 
 #[test]

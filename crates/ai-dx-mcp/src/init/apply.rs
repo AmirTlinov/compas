@@ -3,7 +3,13 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-const ALLOWED_PREFIXES: [&str; 2] = [".agents/mcp/compas/", "tools/custom/"];
+const ALLOWED_PREFIXES: [&str; 3] = [".agents/mcp/compas/", "tools/custom/", "docs/exec-plans/"];
+const ALLOWED_FILES: [&str; 4] = [
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "docs/index.md",
+    "docs/QUALITY_SCORE.md",
+];
 
 fn api_err(code: &str, message: impl Into<String>) -> ApiError {
     ApiError {
@@ -51,14 +57,14 @@ fn normalize_rel_path(p: &str) -> Result<String, ApiError> {
 }
 
 fn ensure_allowed_scope(rel: &str) -> Result<(), ApiError> {
-    if ALLOWED_PREFIXES.iter().any(|p| rel.starts_with(p)) {
+    if ALLOWED_PREFIXES.iter().any(|p| rel.starts_with(p)) || ALLOWED_FILES.contains(&rel) {
         Ok(())
     } else {
         Err(api_err(
             "init.plan_path_forbidden",
             format!(
-                "path is outside init allowlist; allowed_prefixes={:?}; got={:?}",
-                ALLOWED_PREFIXES, rel
+                "path is outside init allowlist; allowed_prefixes={:?}; allowed_files={:?}; got={:?}",
+                ALLOWED_PREFIXES, ALLOWED_FILES, rel
             ),
         ))
     }
@@ -243,69 +249,4 @@ pub(crate) fn apply_plan(repo_root: &Path, plan: &InitPlan) -> Result<(), ApiErr
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::api::{InitPlan, InitWriteFile};
-    use tempfile::tempdir;
-
-    #[test]
-    fn apply_plan_writes_files_under_allowlist() {
-        let dir = tempdir().unwrap();
-        let repo = dir.path();
-
-        let plan = InitPlan {
-            writes: vec![InitWriteFile {
-                path: "tools/custom/x/tool.toml".to_string(),
-                content_utf8: "hello".to_string(),
-            }],
-            deletes: vec![],
-        };
-
-        apply_plan(repo, &plan).expect("apply ok");
-        assert_eq!(
-            fs::read_to_string(repo.join("tools/custom/x/tool.toml")).unwrap(),
-            "hello"
-        );
-    }
-
-    #[test]
-    fn apply_plan_rejects_paths_outside_allowlist() {
-        let dir = tempdir().unwrap();
-        let repo = dir.path();
-
-        let plan = InitPlan {
-            writes: vec![InitWriteFile {
-                path: "README.md".to_string(),
-                content_utf8: "nope".to_string(),
-            }],
-            deletes: vec![],
-        };
-
-        let err = apply_plan(repo, &plan).unwrap_err();
-        assert_eq!(err.code, "init.plan_path_forbidden");
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn apply_plan_rejects_symlink_path_component() {
-        use std::os::unix::fs::symlink;
-
-        let dir = tempdir().unwrap();
-        let repo = dir.path();
-        let outside = tempdir().unwrap();
-
-        // `.agents` is a symlink -> would allow writing outside repo_root without a guard.
-        symlink(outside.path(), repo.join(".agents")).expect("create symlink");
-
-        let plan = InitPlan {
-            writes: vec![InitWriteFile {
-                path: ".agents/mcp/compas/plugins/default/plugin.toml".to_string(),
-                content_utf8: "x".to_string(),
-            }],
-            deletes: vec![],
-        };
-
-        let err = apply_plan(repo, &plan).unwrap_err();
-        assert_eq!(err.code, "init.plan_path_symlink", "{err:?}");
-    }
-}
+mod tests;
