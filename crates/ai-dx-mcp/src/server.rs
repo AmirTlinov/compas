@@ -4,7 +4,7 @@ use rmcp::{
     Json, ServerHandler,
     handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::*,
-    tool, tool_handler, tool_router,
+    tool, tool_router,
 };
 
 #[derive(Clone)]
@@ -176,8 +176,41 @@ impl Default for AiDxServer {
     }
 }
 
-#[tool_handler]
 impl ServerHandler for AiDxServer {
+    fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> impl std::future::Future<Output = Result<CallToolResult, rmcp::ErrorData>> + Send + '_
+    {
+        async move {
+            let tcc = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
+            self.tool_router.call(tcc).await
+        }
+    }
+
+    fn list_tools(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> impl std::future::Future<Output = Result<ListToolsResult, rmcp::ErrorData>> + Send + '_
+    {
+        async move {
+            // Tool ordering is a protocol-level contract for prompt caching: we must be deterministic.
+            let mut tools = self.tool_router.list_all();
+            tools.sort_by(|a, b| a.name.cmp(&b.name));
+            Ok(ListToolsResult {
+                tools,
+                meta: None,
+                next_cursor: None,
+            })
+        }
+    }
+
+    fn get_tool(&self, name: &str) -> Option<Tool> {
+        self.tool_router.get(name).cloned()
+    }
+
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             instructions: Some(

@@ -37,11 +37,18 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
         .list_tools(Default::default())
         .await
         .expect("list tools");
-    assert!(tools.tools.iter().any(|t| t.name == "compas.validate"));
-    assert!(tools.tools.iter().any(|t| t.name == "compas.gate"));
-    assert!(tools.tools.iter().any(|t| t.name == "compas.init"));
-    assert!(tools.tools.iter().any(|t| t.name == "compas.catalog"));
-    assert!(tools.tools.iter().any(|t| t.name == "compas.exec"));
+    let tool_names: Vec<String> = tools.tools.iter().map(|t| t.name.to_string()).collect();
+    let expected_tools = vec![
+        "compas.catalog".to_string(),
+        "compas.exec".to_string(),
+        "compas.gate".to_string(),
+        "compas.init".to_string(),
+        "compas.validate".to_string(),
+    ];
+    assert_eq!(
+        tool_names, expected_tools,
+        "MCP surface must remain stable and ordered (prompt-caching invariant)"
+    );
 
     let list = client
         .call_tool(CallToolRequestParams {
