@@ -16,7 +16,7 @@ The recommended way to install and update plugins is via the signed community re
 - **Fail-closed trust**: signature verification + sha256 verification of the registry release archive.
 - **Deterministic state**: installed files are tracked by a lockfile; drift is detected.
 - **Safe extraction**: no system `tar`, strict tar entry validation, bounded resource usage.
-- **Governance policy**: experimental/deprecated tiers are blocked unless explicitly allowed.
+- **Governance policy**: experimental/sunset tiers are blocked unless explicitly allowed.
 
 ## Model
 
@@ -58,13 +58,13 @@ Registry plugins have a governance tier:
 
 - `community` (default / safe)
 - `experimental` (blocked by default)
-- `deprecated` (blocked by default)
+- `sunset` (blocked by default)
 - `certified` (reserved for future use)
 
 Native registry installs/updates enforce:
 
 - `tier=experimental` requires `--allow-experimental`
-- `tier=deprecated` (or presence of `deprecated` metadata) requires `--allow-deprecated`
+- `tier=sunset` (or presence of `deprecated`/sunset marker metadata) requires `--allow-sunset`
 
 This is intentionally **deny-by-default**: agents tend to “try random plugins” unless blocked.
 
@@ -84,9 +84,9 @@ All commands use the default registry unless `--registry <source>` is provided.
 ### Install
 
 - Install one plugin:
-  - `ai-dx-mcp plugins install --repo-root . -- --plugins spec-adr-gate --force`
+  - `ai-dx-mcp plugins install --repo-root . --admin-lane -- --plugins spec-adr-gate --force`
 - Install a pack:
-  - `ai-dx-mcp plugins install --repo-root . -- --packs ai-core --force`
+  - `ai-dx-mcp plugins install --repo-root . --admin-lane -- --packs ai-core --force`
 
 Notes:
 - `--force` is required when the repo already has unmanaged plugin directories or drift.
@@ -95,14 +95,14 @@ Notes:
 ### Update
 
 - Update previously installed plugins (infers targets from lockfile):
-  - `ai-dx-mcp plugins update --repo-root . -- --force`
+  - `ai-dx-mcp plugins update --repo-root . --admin-lane -- --force`
 - Update explicit set:
-  - `ai-dx-mcp plugins update --repo-root . -- --plugins spec-adr-gate --force`
+  - `ai-dx-mcp plugins update --repo-root . --admin-lane -- --plugins spec-adr-gate --force`
 
 ### Uninstall
 
 - Uninstall explicit set:
-  - `ai-dx-mcp plugins uninstall --repo-root . -- --plugins spec-adr-gate --force`
+  - `ai-dx-mcp plugins uninstall --repo-root . --admin-lane -- --plugins spec-adr-gate --force`
 
 ### Doctor
 
@@ -115,7 +115,6 @@ Compas stores **deterministic installation state**:
 
 - Lockfile: `.agents/mcp/compas/plugins.lock.json`
   - declares installed plugins/packs and the sha256 for each installed file
-- Legacy state (migration only): `.agents/mcp/compas/plugins/.registry_state.json`
 
 Drift handling:
 
@@ -143,4 +142,3 @@ Recovery guidance:
 - Treat plugins as **policy and evidence**, not as “nice-to-have tooling”.
 - Keep `ci_fast` lean: fast gates reduce agent “try random things” behavior.
 - Keep slow tools in `ci`/`flagship` or scheduled jobs; use compas `impact rules` to avoid wasting time.
-
