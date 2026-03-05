@@ -245,6 +245,7 @@ fn run_manifest_install(repo_root: &Path, manifest_path: &Path) -> std::process:
     let args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),

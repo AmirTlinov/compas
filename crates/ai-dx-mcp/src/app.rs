@@ -604,10 +604,10 @@ pub fn validate(
     let ok = matches!(mode, ValidateMode::Warn)
         || matches!(verdict.decision.status, DecisionStatus::Pass);
 
-    ValidateOutput {
+    let mut out = ValidateOutput {
         ok,
         error: None,
-        schema_version: "3".to_string(),
+        schema_version: "4".to_string(),
         repo_root: repo_root.to_string(),
         mode,
         violations: final_violations,
@@ -624,8 +624,11 @@ pub fn validate(
         quality_posture: Some(quality_posture),
         agent_digest: Some(agent_digest),
         summary_md: None,
+        evidence: crate::api::EvidenceEnvelope::default(),
         payload_meta: None,
-    }
+    };
+    out.evidence = crate::evidence::build_validate_envelope(&out);
+    out
 }
 
 pub async fn gate(
@@ -664,5 +667,7 @@ pub async fn gate_with_budget(
         ));
     }
 
+    out.validate.evidence = crate::evidence::build_validate_envelope(&out.validate);
+    out.evidence = crate::evidence::build_gate_envelope(&out);
     out
 }

@@ -42,7 +42,7 @@
 ### Tests / Verify
 - `cargo test -p ai-dx-mcp`
 - `cargo run -p ai-dx-mcp -- validate ratchet`
-- `cargo run -p ai-dx-mcp -- gate ci-fast --dry-run`
+- `cargo run -p ai-dx-mcp -- gate ci_fast --dry-run`
 
 ### Blockers
 - нет
@@ -55,7 +55,7 @@
 ### Proof
 - CMD: `cargo test -p ai-dx-mcp`
 - CMD: `cargo run -p ai-dx-mcp -- validate ratchet`
-- CMD: `cargo run -p ai-dx-mcp -- gate ci-fast --dry-run`
+- CMD: `cargo run -p ai-dx-mcp -- gate ci_fast --dry-run`
 - FILE: `.agents/mcp/compas/baselines/public_surface.json`
 - FILE: `docs/plans/mcp-compas-ai-dx/Slice-4.md`
 

@@ -27,4 +27,4 @@ STATUS = Approved
 
 ## Rollback
 - Для эскалации инцидента допускается временно исключить правило impact и gate шаг (или plugin) только через согласованный PR-эксепшен и с последующим восстановлением;
-- После устранения причины включить P02 обратно и зафиксировать evidence повторного прохождения `cargo run -p ai-dx-mcp -- validate ratchet` и `./dx ci-fast --dry-run`.
+- После устранения причины включить P02 обратно и зафиксировать evidence повторного прохождения `cargo run -p ai-dx-mcp -- validate ratchet` и `./dx ci_fast --dry-run`.

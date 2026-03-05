@@ -13,7 +13,8 @@ usage() {
 Usage:
   ./dx validate [ratchet|strict|warn] [--write-baseline] [--repo-root <path>]
   ./dx init [--apply] [--packs <builtin:...,...>] [--repo-root <path>]
-  ./dx gate <ci-fast|ci|flagship> [--dry-run] [--write-witness] [--repo-root <path>]
+  ./dx gate <ci_fast|ci-fast|ci|flagship> [--dry-run] [--write-witness] [--repo-root <path>]
+  ./dx ci_fast [--dry-run] [--write-witness] [--repo-root <path>]
   ./dx ci-fast [--dry-run] [--write-witness] [--repo-root <path>]
   ./dx ci [--dry-run] [--write-witness] [--repo-root <path>]
   ./dx flagship [--dry-run] [--write-witness] [--repo-root <path>]
@@ -65,7 +66,10 @@ case "$cmd" in
     shift
 
     case "$kind" in
-      ci-fast|ci|flagship) ;;
+      ci-fast)
+        kind="ci_fast"
+        ;;
+      ci_fast|ci|flagship) ;;
       *)
         echo "dx: unknown gate kind: $kind" >&2
         usage >&2
@@ -77,8 +81,13 @@ case "$cmd" in
     exit $?
     ;;
 
-  ci-fast|ci|flagship)
+  ci_fast|ci|flagship)
     run_compas gate "$cmd" "$@"
+    exit $?
+    ;;
+
+  ci-fast)
+    run_compas gate "ci_fast" "$@"
     exit $?
     ;;
 

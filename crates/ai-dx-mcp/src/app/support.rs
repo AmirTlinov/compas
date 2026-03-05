@@ -16,7 +16,7 @@ pub(super) fn empty_output_with_error(
     ValidateOutput {
         ok: false,
         error: Some(error),
-        schema_version: "3".to_string(),
+        schema_version: "4".to_string(),
         repo_root: repo_root.to_string(),
         mode,
         violations: vec![],
@@ -33,6 +33,7 @@ pub(super) fn empty_output_with_error(
         quality_posture: None,
         agent_digest: None,
         summary_md: None,
+        evidence: crate::api::EvidenceEnvelope::default(),
         payload_meta: None,
     }
 }

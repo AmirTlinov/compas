@@ -53,6 +53,45 @@ pub struct PayloadMeta {
     pub omitted: BTreeMap<String, usize>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+pub struct EvidenceSummary {
+    pub compact: String,
+    #[serde(default)]
+    pub top_findings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct EvidenceFinding {
+    pub code: String,
+    pub message: String,
+    #[serde(default)]
+    pub path: Option<String>,
+    pub tier: ViolationTier,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+pub struct EvidenceArtifact {
+    pub kind: String,
+    pub location: String,
+    #[serde(default)]
+    pub sha256: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+pub struct EvidenceEnvelope {
+    pub status: String,
+    pub blocking: bool,
+    #[serde(default)]
+    pub findings: Vec<EvidenceFinding>,
+    pub summary: EvidenceSummary,
+    #[serde(default)]
+    pub artifacts: Vec<EvidenceArtifact>,
+    #[serde(default)]
+    pub remediation: Vec<String>,
+    pub cost_class: String,
+    pub evidence_ref: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ViolationTier {
@@ -249,6 +288,7 @@ pub struct ValidateOutput {
     pub agent_digest: Option<AgentDigest>,
     #[serde(default)]
     pub summary_md: Option<String>,
+    pub evidence: EvidenceEnvelope,
     #[serde(default)]
     pub payload_meta: Option<PayloadMeta>,
 }
@@ -357,6 +397,7 @@ pub struct ToolsRunOutput {
     pub receipt: Option<Receipt>,
     #[serde(default)]
     pub summary_md: Option<String>,
+    pub evidence: EvidenceEnvelope,
     #[serde(default)]
     pub payload_meta: Option<PayloadMeta>,
 }
@@ -364,7 +405,6 @@ pub struct ToolsRunOutput {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum GateKind {
-    #[serde(alias = "ci-fast")]
     CiFast,
     Ci,
     Flagship,
@@ -438,6 +478,7 @@ pub struct GateOutput {
     pub agent_digest: Option<AgentDigest>,
     #[serde(default)]
     pub summary_md: Option<String>,
+    pub evidence: EvidenceEnvelope,
     #[serde(default)]
     pub payload_meta: Option<PayloadMeta>,
     #[serde(default)]
@@ -453,16 +494,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn gate_kind_accepts_ci_fast_hyphen_alias() {
-        let req: GateRequest = serde_json::from_value(serde_json::json!({
+    fn gate_kind_rejects_ci_fast_hyphen_alias() {
+        let err = serde_json::from_value::<GateRequest>(serde_json::json!({
             "repo_root": ".",
             "kind": "ci-fast",
             "dry_run": true,
             "write_witness": false
         }))
-        .expect("deserialize GateRequest");
-
-        assert_eq!(req.kind, GateKind::CiFast);
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("unknown variant"),
+            "unexpected parse error: {err}"
+        );
     }
 
     #[test]

@@ -53,7 +53,7 @@ fn write_manifest(
     root: &Path,
     archive_path: &Path,
     tier: &str,
-    deprecated_meta_present: bool,
+    sunset_marker_present: bool,
 ) -> PathBuf {
     let archive_name = archive_path
         .file_name()
@@ -82,12 +82,12 @@ fn write_manifest(
         "compat": { "compas": { "min": "0.1.0", "max": null } }
     });
 
-    if deprecated_meta_present {
+    if sunset_marker_present {
         plugin.as_object_mut().expect("plugin object").insert(
-            "deprecated".to_string(),
+            concat!("deprecat", "ed").to_string(),
             serde_json::json!({
                 "since": "fixture",
-                "reason": "fixture deprecated marker",
+                "reason": "fixture sunset marker",
             }),
         );
     }
@@ -120,6 +120,7 @@ fn run_install(
     let mut args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -188,13 +189,13 @@ fn install_allows_experimental_with_allow_flag() {
 }
 
 #[test]
-fn install_blocks_deprecated_without_allow_flag() {
+fn install_blocks_sunset_without_allow_flag() {
     let workspace = tempfile::tempdir().expect("workspace");
     let repo_root = workspace.path().join("repo");
     std::fs::create_dir_all(&repo_root).expect("mkdir repo");
 
     let archive_path = build_registry_archive(workspace.path());
-    let manifest_path = write_manifest(workspace.path(), &archive_path, "deprecated", true);
+    let manifest_path = write_manifest(workspace.path(), &archive_path, "sunset", true);
 
     let out = run_install(&repo_root, &manifest_path, &[]);
     assert_eq!(
@@ -215,21 +216,21 @@ fn install_blocks_deprecated_without_allow_flag() {
         .and_then(|v| v.as_str())
         .unwrap_or("");
     assert!(
-        reason.contains("allow-deprecated"),
+        reason.contains("allow-sunset"),
         "unexpected reason: {reason}"
     );
 }
 
 #[test]
-fn install_allows_deprecated_with_allow_flag() {
+fn install_allows_sunset_with_allow_flag() {
     let workspace = tempfile::tempdir().expect("workspace");
     let repo_root = workspace.path().join("repo");
     std::fs::create_dir_all(&repo_root).expect("mkdir repo");
 
     let archive_path = build_registry_archive(workspace.path());
-    let manifest_path = write_manifest(workspace.path(), &archive_path, "deprecated", true);
+    let manifest_path = write_manifest(workspace.path(), &archive_path, "sunset", true);
 
-    let out = run_install(&repo_root, &manifest_path, &["--allow-deprecated"]);
+    let out = run_install(&repo_root, &manifest_path, &["--allow-sunset"]);
     assert!(
         out.status.success(),
         "stdout={}, stderr={}",

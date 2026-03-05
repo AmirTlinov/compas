@@ -86,7 +86,7 @@ All commands use the default registry unless `--registry <source>` is provided.
 - Install one plugin:
   - `ai-dx-mcp plugins install --repo-root . -- --plugins spec-adr-gate --force`
 - Install a pack:
-  - `ai-dx-mcp plugins install --repo-root . -- --packs ai-only-core --force`
+  - `ai-dx-mcp plugins install --repo-root . -- --packs ai-core --force`
 
 Notes:
 - `--force` is required when the repo already has unmanaged plugin directories or drift.

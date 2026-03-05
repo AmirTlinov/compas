@@ -8,7 +8,7 @@ const WITNESS_MAX_TOTAL_BYTES: u64 = 2 * 1024 * 1024;
 
 fn gate_kind_slug(kind: GateKind) -> &'static str {
     match kind {
-        GateKind::CiFast => "ci-fast",
+        GateKind::CiFast => "ci_fast",
         GateKind::Ci => "ci",
         GateKind::Flagship => "flagship",
     }
@@ -185,6 +185,9 @@ pub(crate) fn maybe_write_gate_witness(
         return out;
     }
 
+    out.validate.evidence = crate::evidence::build_validate_envelope(&out.validate);
+    out.evidence = crate::evidence::build_gate_envelope(&out);
+
     let witness_rel = format!(
         ".agents/mcp/compas/witness/gate_{}.json",
         gate_kind_slug(kind)
@@ -301,11 +304,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let chain_path = dir.path().join("chain.json");
 
-        let entry1 = append_chain_entry(&chain_path, "ci-fast", "abc123def456", true).unwrap();
+        let entry1 = append_chain_entry(&chain_path, "ci_fast", "abc123def456", true).unwrap();
         assert_eq!(entry1.prev_hash, "genesis");
         assert!(!entry1.entry_hash.is_empty());
 
-        let entry2 = append_chain_entry(&chain_path, "ci-fast", "def456abc789", true).unwrap();
+        let entry2 = append_chain_entry(&chain_path, "ci_fast", "def456abc789", true).unwrap();
         assert_eq!(entry2.prev_hash, entry1.entry_hash);
 
         let chain = load_witness_chain(&chain_path).unwrap();
@@ -318,8 +321,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let chain_path = dir.path().join("chain.json");
 
-        append_chain_entry(&chain_path, "ci-fast", "aaa", true).unwrap();
-        append_chain_entry(&chain_path, "ci-fast", "bbb", true).unwrap();
+        append_chain_entry(&chain_path, "ci_fast", "aaa", true).unwrap();
+        append_chain_entry(&chain_path, "ci_fast", "bbb", true).unwrap();
 
         let mut chain = load_witness_chain(&chain_path).unwrap();
         chain.entries[0].entry_hash = "tampered".to_string();
@@ -341,7 +344,7 @@ mod tests {
             validate: ValidateOutput {
                 ok: true,
                 error: None,
-                schema_version: "3".to_string(),
+                schema_version: "4".to_string(),
                 repo_root: ".".to_string(),
                 mode: ValidateMode::Warn,
                 violations: vec![],
@@ -368,6 +371,7 @@ mod tests {
                 quality_posture: None,
                 agent_digest: None,
                 summary_md: None,
+                evidence: crate::api::EvidenceEnvelope::default(),
                 payload_meta: None,
             },
             receipts: vec![],
@@ -386,6 +390,7 @@ mod tests {
             }),
             agent_digest: None,
             summary_md: None,
+            evidence: crate::api::EvidenceEnvelope::default(),
             payload_meta: None,
             job: None,
             job_state: None,

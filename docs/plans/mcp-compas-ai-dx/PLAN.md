@@ -17,7 +17,7 @@
 2. **Slice‑2**: LOC ratchet (practical) + exception protocol (allowlist с expiry) + gate witness (witness JSON) + CLI gate. **PASS (2026-02-14)** → см. `Slice-2.md`.
 3. **Slice‑3**: env‑registry + `effective config` (единый реестр env vars и вывод конфигурации). **PASS (2026-02-14)** → см. `Slice-3.md`.
 4. **Slice‑4**: boundary/public surface гейты (import/export rules + pub surface diff). **PASS (2026-02-14)** → см. `Slice-4.md`.
-5. **Slice‑5**: receipts+witness (артефакты, sha256, ротация) + интеграция в `./dx ci-fast/flagship`. **PASS (2026-02-14)** → см. `Slice-5.md`.
+5. **Slice‑5**: receipts+witness (артефакты, sha256, ротация) + интеграция в `./dx ci_fast/flagship`. **PASS (2026-02-14)** → см. `Slice-5.md`.
 6. **Slice‑6**: импорт project tools из `tool.toml` через `tool_import_globs` (plugin.toml) + fail‑closed ошибки `config.import_*`. **PASS (2026-02-14)** → см. `Slice-6.md`.
 7. **Slice‑7**: rename бренда инструмента в `compas` + миграция конфиг-путей на `.agents/mcp/compas`. **PASS (2026-02-14)** → см. `Slice-7.md`.
 

@@ -3,7 +3,7 @@
 ## Rules (max 10 lines)
 1) `cargo test -p ai-dx-mcp` обязателен перед любым финалом.
 2) `cargo run -p ai-dx-mcp -- validate ratchet` обязателен после правок.
-3) `./dx ci-fast --dry-run` обязателен как итоговый локальный гейт.
+3) `./dx ci_fast --dry-run` обязателен как итоговый локальный гейт.
 4) Любой новый инструмент добавляется только через `tool.toml`.
 5) Любой новый плагин добавляется только через `plugin.toml`.
 6) Описания plugin/tool обязательны и должны быть короткими и ясными.
@@ -31,7 +31,7 @@ _fingerprint: 6dd594dd2f2eb48c_
 | DX wrapper | `dx` |
 
 ### Installed plugins
-| Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
+| Plugin | Purpose | Tools | Gates (ci_fast / ci / flagship) |
 |---|---|---|---|
 | `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check` | `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
 

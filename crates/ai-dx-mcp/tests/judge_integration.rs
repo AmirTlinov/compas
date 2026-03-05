@@ -17,7 +17,7 @@ fn validate_warn_returns_verdict_pass() {
         false,
         None,
     );
-    assert_eq!(output.schema_version, "3");
+    assert_eq!(output.schema_version, "4");
     let verdict = output.verdict.expect("verdict must be present");
     assert!(matches!(
         verdict.decision.status,

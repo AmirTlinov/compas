@@ -4,7 +4,7 @@
 PLUGIN = P02
 PURPOSE = Не начинать реализацию без формализованного «что/не что/как проверять/как откатывать».
 ARTIFACTS = `docs/spec/p02-spec-adr-gate.md`, `docs/adr/ADR-0001-spec-adr-gate.md`
-WITNESS = `./dx ci-fast --dry-run`
+WITNESS = `./dx ci_fast --dry-run`
 
 [CONTENT]
 ## Goal
@@ -36,4 +36,4 @@ WITNESS = `./dx ci-fast --dry-run`
 ## Rollback
 - Если gate блокирует без бизнес-необходимых причин: откатить правки P02 в `quality_contract.toml` для временного снятия обязательности (до triage) и зафиксировать инцидент;
 - Перевести `spec-check` в `ci_fast` через отдельный emergency commit только после согласованного решения и с явным rationale в `docs/spec/p02-spec-adr-gate.md`;
-- Восстановить штатный путь по шагам: исправить недостающие секции, запустить `./dx ci-fast --dry-run`, затем повторно включить `spec-check`.
+- Восстановить штатный путь по шагам: исправить недостающие секции, запустить `./dx ci_fast --dry-run`, затем повторно включить `spec-check`.

@@ -124,6 +124,7 @@ impl AiDxServer {
                     verdict: None,
                     agent_digest: None,
                     summary_md: None,
+                    evidence: crate::api::EvidenceEnvelope::default(),
                     payload_meta: None,
                     job: None,
                     job_state: None,

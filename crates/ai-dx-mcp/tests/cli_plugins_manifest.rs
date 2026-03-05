@@ -128,6 +128,7 @@ fn manifest_install_blocks_on_drift_without_force_and_recovers_with_force() {
     let base_args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -202,6 +203,7 @@ fn manifest_install_blocks_on_unmanaged_plugin_dirs_without_force() {
     let base_args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -259,6 +261,7 @@ fn manifest_update_infers_lockfile_targets_and_completes() {
     let install_args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -278,6 +281,7 @@ fn manifest_update_infers_lockfile_targets_and_completes() {
     let update_args = vec![
         "plugins".to_string(),
         "update".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -312,6 +316,7 @@ fn manifest_uninstall_blocks_on_type_drift_without_force() {
     let install_args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -336,6 +341,7 @@ fn manifest_uninstall_blocks_on_type_drift_without_force() {
     let uninstall_args = vec![
         "plugins".to_string(),
         "uninstall".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -379,6 +385,7 @@ fn manifest_uninstall_rolls_back_when_lockfile_commit_fails() {
     let install_args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -398,6 +405,7 @@ fn manifest_uninstall_rolls_back_when_lockfile_commit_fails() {
     let uninstall_args = vec![
         "plugins".to_string(),
         "uninstall".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -469,6 +477,7 @@ fn manifest_doctor_detects_type_drift_and_unknown_symlink() {
     let install_args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -547,6 +556,7 @@ fn manifest_update_fails_when_plugins_operation_lock_is_held() {
     let install_args = vec![
         "plugins".to_string(),
         "install".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
@@ -567,6 +577,7 @@ fn manifest_update_fails_when_plugins_operation_lock_is_held() {
     let update_args = vec![
         "plugins".to_string(),
         "update".to_string(),
+        "--admin-lane".to_string(),
         "--registry".to_string(),
         manifest_path.to_string_lossy().to_string(),
         "--repo-root".to_string(),
