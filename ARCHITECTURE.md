@@ -19,7 +19,7 @@ _fingerprint: 6dd594dd2f2eb48c_
 | DX wrapper | `dx` |
 
 ### Installed plugins
-| Plugin | Purpose | Tools | Gates (ci-fast / ci / flagship) |
+| Plugin | Purpose | Tools | Gates (ci_fast / ci / flagship) |
 |---|---|---|---|
 | `default` | MVP config for developing compas MCP in this repo | `cargo-test`, `cargo-test-lite`, `cargo-test-wasm`, `docs-sync-check` | `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite` / `docs-sync-check`, `cargo-test`, `cargo-test-lite`, `cargo-test-wasm` |
 
