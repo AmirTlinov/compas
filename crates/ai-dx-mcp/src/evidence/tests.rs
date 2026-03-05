@@ -1,10 +1,11 @@
 use super::*;
 use crate::api::{
     AgentDigest, ApiError, BoundarySummary, CoverageSummary, Decision, DecisionReason,
-    EffectiveConfigSummary, ErrorClass, FindingV2, LocSummary, QualityPosture, Receipt,
-    RiskSummary, TrustScore, ValidateMode, Verdict, WitnessMeta,
+    DecisionStatus, EffectiveConfigSummary, ErrorClass, FindingV2, GateKind, LocSummary,
+    QualityPosture, Receipt, RiskSummary, TrustScore, ValidateMode, Verdict, ViolationTier,
+    WitnessMeta,
 };
-use serde_json::json;
+use serde_json::{Value, json};
 
 fn empty_validate_output() -> ValidateOutput {
     ValidateOutput {
@@ -90,7 +91,10 @@ fn build_exec_envelope_prefers_report_summary_and_remediation() {
     assert_eq!(envelope.summary.compact, "adapter summary");
     assert_eq!(
         envelope.summary.top_findings,
-        vec!["lint.alpha".to_string(), "lint.beta: beta warning".to_string()]
+        vec![
+            "lint.alpha".to_string(),
+            "lint.beta: beta warning".to_string()
+        ]
     );
     assert_eq!(
         envelope.remediation,
@@ -124,15 +128,14 @@ fn build_exec_envelope_falls_back_without_report_summary() {
     );
     assert_eq!(
         envelope.summary.top_findings,
-        vec![
-            "lint.alpha".to_string(),
-            "compas.exec.exit_nonzero".to_string()
-        ]
+        vec!["lint.alpha".to_string()]
     );
     assert_eq!(
         envelope.remediation,
-        vec!["inspect receipt stderr_tail and structured_report, then rerun compas.exec."
-            .to_string()]
+        vec![
+            "inspect receipt stderr_tail and structured_report, then rerun compas.exec."
+                .to_string()
+        ]
     );
 }
 
@@ -201,7 +204,10 @@ fn build_gate_envelope_prefers_report_summary_and_remediation() {
 
     let envelope = build_gate_envelope(&gate);
     assert_eq!(envelope.summary.compact, "report-backed gate summary");
-    assert_eq!(envelope.summary.top_findings, vec!["lint.alpha".to_string()]);
+    assert_eq!(
+        envelope.summary.top_findings,
+        vec!["lint.alpha".to_string()]
+    );
     assert_eq!(
         envelope.remediation,
         vec![

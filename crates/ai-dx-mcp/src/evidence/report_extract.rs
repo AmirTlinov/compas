@@ -76,30 +76,69 @@ pub(super) fn extract_report_finding_codes(report: &Value) -> Vec<String> {
         .collect()
 }
 
+fn top_finding_text(item: &Value) -> Option<String> {
+    if let Some(text) = item.as_str().map(str::trim).filter(|text| !text.is_empty()) {
+        return Some(text.to_string());
+    }
+
+    let code = item
+        .get("code")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let message = item
+        .get("message")
+        .or_else(|| item.get("summary"))
+        .or_else(|| item.get("title"))
+        .or_else(|| item.get("text"))
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+
+    match (code, message) {
+        (Some(code), Some(message)) if !message.eq_ignore_ascii_case(code) => {
+            Some(format!("{code}: {message}"))
+        }
+        (Some(code), _) => Some(code.to_string()),
+        (None, Some(message)) => Some(message.to_string()),
+        _ => None,
+    }
+}
+
+pub(super) fn extract_report_top_findings(report: &Value) -> Vec<String> {
+    let items = report
+        .get("top_findings")
+        .or_else(|| report.get("summary").and_then(|s| s.get("top_findings")))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    dedupe_strings(
+        items
+            .iter()
+            .filter_map(top_finding_text)
+            .take(3)
+            .collect::<Vec<_>>(),
+    )
+}
+
 pub(super) fn extract_report_summary(report: &Value) -> Option<EvidenceSummary> {
     let compact = report
-        .get("summary")
-        .and_then(|s| s.get("compact"))
+        .get("compact_summary")
+        .or_else(|| report.get("summary").and_then(|s| s.get("compact")))
         .and_then(|v| v.as_str())
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(ToString::to_string)?;
 
-    let top_findings = report
-        .get("summary")
-        .and_then(|s| s.get("top_findings"))
-        .and_then(|v| v.as_array())
-        .map(|items| {
+    let top_findings = {
+        let items = extract_report_top_findings(report);
+        if items.is_empty() {
+            extract_report_finding_codes(report)
+        } else {
             items
-                .iter()
-                .filter_map(|item| item.as_str().map(str::trim))
-                .filter(|s| !s.is_empty())
-                .map(ToString::to_string)
-                .take(3)
-                .collect::<Vec<_>>()
-        })
-        .filter(|items| !items.is_empty())
-        .unwrap_or_else(|| extract_report_finding_codes(report));
+        }
+    };
 
     Some(EvidenceSummary {
         compact,
@@ -114,8 +153,13 @@ pub(super) fn fill_summary_fallbacks(
 ) {
     if summary.top_findings.is_empty() {
         summary.top_findings = report
-            .map(extract_report_finding_codes)
+            .map(extract_report_top_findings)
             .filter(|items| !items.is_empty())
+            .or_else(|| {
+                report
+                    .map(extract_report_finding_codes)
+                    .filter(|items| !items.is_empty())
+            })
             .unwrap_or_else(|| find_top_codes(findings));
     }
 }
@@ -138,12 +182,15 @@ pub(super) fn extract_report_remediation(report: &Value) -> Vec<String> {
                 let obj = item.as_object()?;
                 let title = obj
                     .get("title")
+                    .or_else(|| obj.get("summary"))
+                    .or_else(|| obj.get("message"))
                     .and_then(|v| v.as_str())
                     .map(str::trim)
-                    .filter(|s| !s.is_empty())
-                    .unwrap_or("Remediation");
+                    .filter(|s| !s.is_empty());
                 let steps: Vec<String> = obj
                     .get("steps")
+                    .or_else(|| obj.get("actions"))
+                    .or_else(|| obj.get("instructions"))
                     .and_then(|v| v.as_array())
                     .into_iter()
                     .flatten()
@@ -152,10 +199,12 @@ pub(super) fn extract_report_remediation(report: &Value) -> Vec<String> {
                     .filter(|s| !s.is_empty())
                     .map(ToString::to_string)
                     .collect();
-                if steps.is_empty() {
-                    return None;
+                match (title, steps.is_empty()) {
+                    (Some(title), true) => Some(title.to_string()),
+                    (Some(title), false) => Some(format!("{title}: {}", steps.join("; "))),
+                    (None, false) => Some(steps.join("; ")),
+                    (None, true) => None,
                 }
-                Some(format!("{title}: {}", steps.join("; ")))
             })
             .take(3)
             .collect(),
