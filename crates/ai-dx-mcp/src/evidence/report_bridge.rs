@@ -354,24 +354,34 @@ pub(crate) fn build_gate_envelope(out: &GateOutput) -> EvidenceEnvelope {
     }
 
     findings.truncate(MAX_FINDINGS);
-    let blocking = blocking_from_findings(&findings) || !out.ok;
-    let status = if blocking {
+    let findings_blocking = blocking_from_findings(&findings);
+    let blocking = findings_blocking || !out.ok;
+    let verdict_status = out.verdict.as_ref().map(|v| match v.decision.status {
+        crate::api::DecisionStatus::Pass => "pass",
+        crate::api::DecisionStatus::Retryable => "retryable",
+        crate::api::DecisionStatus::Blocked => "blocked",
+    });
+    let status = if findings_blocking {
         "blocked".to_string()
     } else {
-        out.verdict
-            .as_ref()
-            .map(|v| match v.decision.status {
-                crate::api::DecisionStatus::Pass => "pass".to_string(),
-                crate::api::DecisionStatus::Retryable => "retryable".to_string(),
-                crate::api::DecisionStatus::Blocked => "blocked".to_string(),
-            })
-            .unwrap_or_else(|| {
-                if out.ok {
-                    "pass".to_string()
-                } else {
+        match verdict_status {
+            Some("retryable") => "retryable".to_string(),
+            Some("blocked") => "blocked".to_string(),
+            Some("pass") => {
+                if blocking {
                     "blocked".to_string()
+                } else {
+                    "pass".to_string()
                 }
-            })
+            }
+            _ => {
+                if blocking {
+                    "blocked".to_string()
+                } else {
+                    "pass".to_string()
+                }
+            }
+        }
     };
     let summary = if let Some(report_summary) = primary_report_summary {
         let top_findings = if report_summary.top_findings.is_empty() {
@@ -670,6 +680,45 @@ mod tests {
 
         let envelope = build_gate_envelope(&out);
         assert_eq!(envelope.status, "blocked");
+        assert!(envelope.blocking);
+    }
+
+    #[test]
+    fn build_gate_envelope_preserves_retryable_status_from_verdict() {
+        let out = GateOutput {
+            ok: false,
+            error: Some(ApiError {
+                code: "gate.run_failed".to_string(),
+                message: "transient timeout".to_string(),
+            }),
+            repo_root: ".".to_string(),
+            kind: GateKind::CiFast,
+            validate: mk_validate(),
+            receipts: vec![],
+            witness_path: None,
+            witness: None,
+            verdict: Some(crate::api::Verdict {
+                decision: crate::api::Decision {
+                    status: crate::api::DecisionStatus::Retryable,
+                    reasons: vec![],
+                    blocking_count: 0,
+                    observation_count: 0,
+                },
+                quality_posture: None,
+                suppressed_count: 0,
+                suppressed_codes: vec![],
+            }),
+            agent_digest: None,
+            summary_md: None,
+            evidence: EvidenceEnvelope::default(),
+            payload_meta: None,
+            job: None,
+            job_state: None,
+            job_error: None,
+        };
+
+        let envelope = build_gate_envelope(&out);
+        assert_eq!(envelope.status, "retryable");
         assert!(envelope.blocking);
     }
 }
