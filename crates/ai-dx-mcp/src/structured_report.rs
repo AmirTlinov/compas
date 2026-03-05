@@ -1,10 +1,19 @@
 use crate::api::{FindingSeverity, Violation, ViolationTier};
 use crate::hash::sha256_hex;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+mod common;
+mod junit;
+mod normalize;
+#[cfg(test)]
+mod tests;
+
+use common::{find_json_path, first_text, message, text, u64_value};
+use junit::parse_junit_report;
+use normalize::{normalize_compact_summary, normalize_remediation, normalize_top_findings};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
@@ -77,6 +86,9 @@ struct ParsedReport {
     findings: Vec<ParsedFinding>,
     version: Option<String>,
     commit_sha: Option<String>,
+    compact_summary_raw: Option<Value>,
+    top_findings_raw: Vec<Value>,
+    remediation_raw: Vec<Value>,
 }
 
 fn report_path(cfg: &ToolReportConfig, repo_root: &Path) -> PathBuf {
@@ -103,52 +115,6 @@ fn violation(
     }
 }
 
-fn text(v: &Value) -> Option<String> {
-    v.as_str()
-        .map(str::trim)
-        .map(str::to_string)
-        .filter(|s| !s.is_empty())
-}
-
-fn u64_value(v: &Value) -> Option<u64> {
-    if let Some(v) = v.as_u64() {
-        return Some(v);
-    }
-    if let Some(v) = v.as_i64() {
-        return (v >= 0).then_some(v as u64);
-    }
-    v.as_str().and_then(|s| s.parse::<u64>().ok())
-}
-
-fn find_json_path<'a>(root: &'a Value, dotted_path: &str) -> Option<&'a Value> {
-    let mut current = root;
-    for part in dotted_path
-        .split('.')
-        .map(str::trim)
-        .filter(|p| !p.is_empty())
-    {
-        current = current.as_object()?.get(part)?;
-    }
-    Some(current)
-}
-
-fn message(v: &Value) -> String {
-    [
-        v.get("message").and_then(text),
-        v.get("msg").and_then(text),
-        v.get("text").and_then(text),
-        v.get("message").and_then(|m| m.get("text")).and_then(text),
-    ]
-    .into_iter()
-    .flatten()
-    .next()
-    .unwrap_or_else(|| "<empty message>".to_string())
-}
-
-fn first_text(v: &Value, keys: &[&str]) -> Option<String> {
-    keys.iter().find_map(|key| v.get(*key).and_then(text))
-}
-
 fn parse_json_report(
     tool_id: &str,
     payload: &Value,
@@ -163,6 +129,33 @@ fn parse_json_report(
         .as_deref()
         .and_then(|field| find_json_path(payload, field))
         .and_then(text);
+    let summary = payload.get("summary");
+    let compact_summary_raw = payload
+        .get("compact_summary")
+        .cloned()
+        .or_else(|| summary.and_then(|item| item.get("compact")).cloned());
+    let top_findings_raw = payload
+        .get("top_findings")
+        .and_then(Value::as_array)
+        .cloned()
+        .or_else(|| {
+            summary
+                .and_then(|item| item.get("top_findings"))
+                .and_then(Value::as_array)
+                .cloned()
+        })
+        .unwrap_or_default();
+    let remediation_raw = payload
+        .get("remediation")
+        .and_then(Value::as_array)
+        .cloned()
+        .or_else(|| {
+            summary
+                .and_then(|item| item.get("remediation"))
+                .and_then(Value::as_array)
+                .cloned()
+        })
+        .unwrap_or_default();
 
     let findings_values = payload
         .get("findings")
@@ -208,6 +201,9 @@ fn parse_json_report(
         findings,
         version: payload.get("version").and_then(text),
         commit_sha,
+        compact_summary_raw,
+        top_findings_raw,
+        remediation_raw,
     })
 }
 
@@ -265,77 +261,9 @@ fn parse_sarif_report(tool_id: &str, payload: &Value) -> Result<ParsedReport, St
             .and_then(text)
             .or_else(|| payload.get("$schema").and_then(text)),
         commit_sha: None,
-    })
-}
-
-fn xml_attr(input: &str, key: &str) -> Option<String> {
-    let patterns = [format!("{key}=\""), format!("{key}='")];
-    for pattern in patterns {
-        let Some(start) = input.find(&pattern) else {
-            continue;
-        };
-        let quote = pattern.chars().last().unwrap_or('"');
-        let rest = &input[start + pattern.len()..];
-        let Some(end) = rest.find(quote) else {
-            continue;
-        };
-        let value = rest[..end].trim();
-        if !value.is_empty() {
-            return Some(value.to_string());
-        }
-    }
-    None
-}
-
-fn parse_junit_report(tool_id: &str, input: &str) -> Result<ParsedReport, String> {
-    let testcase_re = Regex::new(r"(?s)<testcase\\b([^>]*)>(.*?)</testcase>")
-        .map_err(|e| format!("tool={tool_id}: regex compile failed: {e}"))?;
-    let event_re = Regex::new(r"(?s)<(failure|error)\\b([^>]*)>(.*?)</(?:failure|error)>")
-        .map_err(|e| format!("tool={tool_id}: regex compile failed: {e}"))?;
-
-    let mut findings = Vec::new();
-    for case in testcase_re.captures_iter(input) {
-        let attrs = case.get(1).map(|m| m.as_str()).unwrap_or_default();
-        let inner = case.get(2).map(|m| m.as_str()).unwrap_or_default();
-        let Some(event) = event_re.captures(inner) else {
-            continue;
-        };
-
-        let class_name = xml_attr(attrs, "classname");
-        let test_name = xml_attr(attrs, "name").unwrap_or_else(|| "testcase".to_string());
-        let code = class_name
-            .as_ref()
-            .map(|class| format!("{class}.{test_name}"))
-            .unwrap_or_else(|| test_name.clone());
-
-        let event_attrs = event.get(2).map(|m| m.as_str()).unwrap_or_default();
-        let event_body = event.get(3).map(|m| m.as_str()).unwrap_or_default();
-        let event_tag = event.get(1).map(|m| m.as_str()).unwrap_or("failure");
-
-        findings.push(ParsedFinding {
-            code,
-            category: Some("test".to_string()),
-            message: xml_attr(event_attrs, "message")
-                .or_else(|| {
-                    let text = event_body.trim();
-                    (!text.is_empty()).then_some(text.to_string())
-                })
-                .unwrap_or_else(|| "JUnit failure".to_string()),
-            path: xml_attr(attrs, "file").or_else(|| class_name.clone()),
-            line: xml_attr(attrs, "line").and_then(|n| n.parse::<u64>().ok()),
-            severity_raw: event_tag.to_string(),
-            evidence_ref: None,
-        });
-    }
-
-    if findings.is_empty() {
-        return Err(format!("tool={tool_id}: junit report has no failures"));
-    }
-
-    Ok(ParsedReport {
-        findings,
-        version: None,
-        commit_sha: None,
+        compact_summary_raw: None,
+        top_findings_raw: vec![],
+        remediation_raw: vec![],
     })
 }
 
@@ -661,30 +589,30 @@ pub(crate) fn ingest_tool_report(
         });
     }
 
-    let top_findings: Vec<String> = findings_json
-        .iter()
-        .filter_map(|item| {
-            item.get("code")
-                .and_then(|v| v.as_str())
-                .map(ToString::to_string)
-        })
-        .take(3)
-        .collect();
     let blocking_findings = violations
         .iter()
         .filter(|v| matches!(v.tier, ViolationTier::Blocking))
         .count();
-    let compact_summary = format!(
+    let fallback_compact_summary = format!(
         "tool={tool_id}; findings={}; blocking={blocking_findings}",
         findings_json.len()
     );
+    let compact_summary = normalize_compact_summary(
+        parsed.compact_summary_raw.as_ref(),
+        &fallback_compact_summary,
+    );
+    let top_findings = normalize_top_findings(&parsed.top_findings_raw, &findings_json);
+    let remediation = normalize_remediation(&parsed.remediation_raw);
 
     let report = json!({
         "findings": findings_json,
         "summary": {
-            "compact": compact_summary,
-            "top_findings": top_findings,
+            "compact": compact_summary.clone(),
+            "top_findings": top_findings.clone(),
         },
+        "compact_summary": compact_summary,
+        "top_findings": top_findings,
+        "remediation": remediation,
         "evidence": {
             "report_path": report_path.display().to_string(),
             "report_sha256": report_sha,

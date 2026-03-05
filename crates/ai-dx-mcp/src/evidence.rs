@@ -1,18 +1,23 @@
 use crate::api::{
-    DecisionStatus, EvidenceArtifact, EvidenceEnvelope, EvidenceFinding, EvidenceSummary, GateKind,
-    GateOutput, ToolsRunOutput, ValidateOutput, Violation, ViolationTier,
+    EvidenceEnvelope, EvidenceFinding, EvidenceSummary, GateOutput, ToolsRunOutput, ValidateOutput,
+    Violation,
+};
+
+mod helpers;
+mod report_extract;
+#[cfg(test)]
+mod tests;
+
+use helpers::{
+    blocking_from_findings, dedupe_strings, find_top_codes, gate_kind_slug, remediation_from_exec,
+    remediation_from_gate, remediation_from_validate, simple_cost_class, status_from_decision,
+};
+use report_extract::{
+    extract_report_artifacts, extract_report_finding_codes, extract_report_findings,
+    extract_report_remediation, extract_report_summary, fill_summary_fallbacks,
 };
 
 const MAX_FINDINGS: usize = 5;
-
-fn find_top_codes(findings: &[EvidenceFinding]) -> Vec<String> {
-    findings
-        .iter()
-        .map(|f| f.code.clone())
-        .filter(|code| !code.trim().is_empty())
-        .take(3)
-        .collect()
-}
 
 fn findings_from_violations(violations: &[Violation]) -> Vec<EvidenceFinding> {
     violations
@@ -23,139 +28,6 @@ fn findings_from_violations(violations: &[Violation]) -> Vec<EvidenceFinding> {
             message: v.message.clone(),
             path: v.path.clone(),
             tier: v.tier,
-        })
-        .collect()
-}
-
-fn blocking_from_findings(findings: &[EvidenceFinding]) -> bool {
-    findings
-        .iter()
-        .any(|f| matches!(f.tier, ViolationTier::Blocking))
-}
-
-fn status_from_decision(status: DecisionStatus) -> &'static str {
-    match status {
-        DecisionStatus::Pass => "pass",
-        DecisionStatus::Retryable => "retryable",
-        DecisionStatus::Blocked => "blocked",
-    }
-}
-
-fn simple_cost_class(blocking: bool, findings_count: usize, artifacts_count: usize) -> String {
-    if blocking || findings_count >= 12 || artifacts_count >= 6 {
-        "high".to_string()
-    } else if findings_count > 0 || artifacts_count > 0 {
-        "medium".to_string()
-    } else {
-        "low".to_string()
-    }
-}
-
-fn remediation_from_validate(out: &ValidateOutput, blocking: bool) -> Vec<String> {
-    if let Some(digest) = &out.agent_digest
-        && !digest.minimal_fix_steps.is_empty()
-    {
-        return digest.minimal_fix_steps.iter().take(3).cloned().collect();
-    }
-    if !blocking {
-        return vec!["keep current quality bars and continue with gate.".to_string()];
-    }
-    let code = out
-        .violations
-        .first()
-        .map(|v| v.code.as_str())
-        .unwrap_or("top-violation");
-    vec![format!(
-        "fix `{code}` and rerun compas.validate mode=ratchet."
-    )]
-}
-
-fn remediation_from_gate(out: &GateOutput, blocking: bool) -> Vec<String> {
-    if let Some(digest) = &out.agent_digest
-        && !digest.minimal_fix_steps.is_empty()
-    {
-        return digest.minimal_fix_steps.iter().take(3).cloned().collect();
-    }
-    if !blocking {
-        return vec!["gate passed; continue delivery.".to_string()];
-    }
-    vec!["fix blocking findings and rerun compas.gate kind=ci_fast.".to_string()]
-}
-
-fn remediation_from_exec(out: &ToolsRunOutput, blocking: bool) -> Vec<String> {
-    if !blocking {
-        return vec!["tool execution succeeded; continue with gate.".to_string()];
-    }
-    let fallback = "inspect receipt stderr_tail and structured_report, then rerun compas.exec.";
-    out.error
-        .as_ref()
-        .map(|err| vec![format!("fix `{}` and rerun compas.exec.", err.code)])
-        .unwrap_or_else(|| vec![fallback.to_string()])
-}
-
-fn gate_kind_slug(kind: GateKind) -> &'static str {
-    match kind {
-        GateKind::CiFast => "ci_fast",
-        GateKind::Ci => "ci",
-        GateKind::Flagship => "flagship",
-    }
-}
-
-fn extract_report_artifacts(report: &serde_json::Value) -> Vec<EvidenceArtifact> {
-    let mut out = vec![];
-    let path = report
-        .get("evidence")
-        .and_then(|e| e.get("report_path"))
-        .and_then(|v| v.as_str());
-    let sha = report
-        .get("evidence")
-        .and_then(|e| e.get("report_sha256"))
-        .and_then(|v| v.as_str());
-    if let Some(path) = path {
-        out.push(EvidenceArtifact {
-            kind: "structured_report".to_string(),
-            location: path.to_string(),
-            sha256: sha.map(ToString::to_string),
-        });
-    }
-    out
-}
-
-fn extract_report_findings(report: &serde_json::Value) -> Vec<EvidenceFinding> {
-    report
-        .get("findings")
-        .and_then(|v| v.as_array())
-        .into_iter()
-        .flatten()
-        .take(MAX_FINDINGS)
-        .map(|item| {
-            let tier = match item
-                .get("severity")
-                .and_then(|v| v.as_str())
-                .unwrap_or_default()
-                .to_ascii_lowercase()
-                .as_str()
-            {
-                "critical" | "high" => ViolationTier::Blocking,
-                _ => ViolationTier::Observation,
-            };
-            EvidenceFinding {
-                code: item
-                    .get("code")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("tools.structured_report.finding")
-                    .to_string(),
-                message: item
-                    .get("message")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("structured report finding")
-                    .to_string(),
-                path: item
-                    .get("path")
-                    .and_then(|v| v.as_str())
-                    .map(ToString::to_string),
-                tier,
-            }
         })
         .collect()
 }
@@ -199,7 +71,7 @@ pub(crate) fn build_validate_envelope(out: &ValidateOutput) -> EvidenceEnvelope 
 
 pub(crate) fn build_exec_envelope(out: &ToolsRunOutput) -> EvidenceEnvelope {
     let mut findings: Vec<EvidenceFinding> = vec![];
-    let mut artifacts: Vec<EvidenceArtifact> = vec![];
+    let mut artifacts = vec![];
     let mut status = if out.ok {
         "pass".to_string()
     } else {
@@ -211,7 +83,7 @@ pub(crate) fn build_exec_envelope(out: &ToolsRunOutput) -> EvidenceEnvelope {
             code: error.code.clone(),
             message: error.message.clone(),
             path: None,
-            tier: ViolationTier::Blocking,
+            tier: crate::api::ViolationTier::Blocking,
         });
     }
 
@@ -225,7 +97,7 @@ pub(crate) fn build_exec_envelope(out: &ToolsRunOutput) -> EvidenceEnvelope {
                 code: "compas.exec.exit_nonzero".to_string(),
                 message: format!("tool {} failed", receipt.tool_id),
                 path: None,
-                tier: ViolationTier::Blocking,
+                tier: crate::api::ViolationTier::Blocking,
             });
             status = "blocked".to_string();
         }
@@ -233,21 +105,46 @@ pub(crate) fn build_exec_envelope(out: &ToolsRunOutput) -> EvidenceEnvelope {
 
     findings.truncate(MAX_FINDINGS);
     let blocking = blocking_from_findings(&findings) || !out.ok;
-    let top_findings = find_top_codes(&findings);
-    let summary = EvidenceSummary {
-        compact: out
+    let report_summary = out
+        .receipt
+        .as_ref()
+        .and_then(|r| r.structured_report.as_ref())
+        .and_then(extract_report_summary);
+    let summary = if let Some(mut report_summary) = report_summary {
+        let report = out
             .receipt
             .as_ref()
-            .map(|r| {
-                format!(
-                    "exec status={status}; tool_id={}; success={}; duration_ms={}",
-                    r.tool_id, r.success, r.duration_ms
-                )
-            })
-            .unwrap_or_else(|| format!("exec status={status}; receipt=missing")),
-        top_findings,
+            .and_then(|r| r.structured_report.as_ref());
+        fill_summary_fallbacks(&mut report_summary, report, &findings);
+        report_summary
+    } else {
+        let report_top_findings = out
+            .receipt
+            .as_ref()
+            .and_then(|r| r.structured_report.as_ref())
+            .map(extract_report_finding_codes)
+            .filter(|items| !items.is_empty());
+        EvidenceSummary {
+            compact: out
+                .receipt
+                .as_ref()
+                .map(|r| {
+                    format!(
+                        "exec status={status}; tool_id={}; success={}; duration_ms={}",
+                        r.tool_id, r.success, r.duration_ms
+                    )
+                })
+                .unwrap_or_else(|| format!("exec status={status}; receipt=missing")),
+            top_findings: report_top_findings.unwrap_or_else(|| find_top_codes(&findings)),
+        }
     };
-    let remediation = remediation_from_exec(out, blocking);
+    let remediation = out
+        .receipt
+        .as_ref()
+        .and_then(|r| r.structured_report.as_ref())
+        .map(extract_report_remediation)
+        .filter(|items| !items.is_empty())
+        .unwrap_or_else(|| remediation_from_exec(out, blocking));
     let cost_class = simple_cost_class(blocking, findings.len(), artifacts.len());
     let evidence_ref = out
         .receipt
@@ -269,31 +166,39 @@ pub(crate) fn build_exec_envelope(out: &ToolsRunOutput) -> EvidenceEnvelope {
 
 pub(crate) fn build_gate_envelope(out: &GateOutput) -> EvidenceEnvelope {
     let mut findings = findings_from_violations(&out.validate.violations);
-    let mut artifacts: Vec<EvidenceArtifact> = vec![];
+    let mut artifacts = vec![];
+    let mut primary_report_summary: Option<EvidenceSummary> = None;
+    let mut primary_report_top_findings: Vec<String> = vec![];
+    let mut report_remediation = vec![];
 
     for receipt in &out.receipts {
         if let Some(report) = &receipt.structured_report {
             findings.extend(extract_report_findings(report));
             artifacts.extend(extract_report_artifacts(report));
+            if primary_report_summary.is_none() {
+                primary_report_summary = extract_report_summary(report);
+                primary_report_top_findings = extract_report_finding_codes(report);
+            }
+            report_remediation.extend(extract_report_remediation(report));
         }
         if !receipt.success {
             findings.push(EvidenceFinding {
                 code: "gate.tool_failed".to_string(),
                 message: format!("tool {} failed inside gate", receipt.tool_id),
                 path: None,
-                tier: ViolationTier::Blocking,
+                tier: crate::api::ViolationTier::Blocking,
             });
         }
     }
 
     if let Some(meta) = &out.witness {
-        artifacts.push(EvidenceArtifact {
+        artifacts.push(crate::api::EvidenceArtifact {
             kind: "witness".to_string(),
             location: meta.path.clone(),
             sha256: Some(meta.sha256.clone()),
         });
     } else if let Some(path) = &out.witness_path {
-        artifacts.push(EvidenceArtifact {
+        artifacts.push(crate::api::EvidenceArtifact {
             kind: "witness".to_string(),
             location: path.clone(),
             sha256: None,
@@ -313,16 +218,38 @@ pub(crate) fn build_gate_envelope(out: &GateOutput) -> EvidenceEnvelope {
             }
         });
     let blocking = blocking_from_findings(&findings) || !out.ok;
+    let report_suffix = primary_report_summary
+        .as_ref()
+        .map(|summary| format!("; report={}", summary.compact))
+        .unwrap_or_default();
+    let top_findings = primary_report_summary
+        .map(|mut summary| {
+            fill_summary_fallbacks(&mut summary, None, &findings);
+            summary.top_findings
+        })
+        .filter(|items| !items.is_empty())
+        .or_else(|| {
+            (!primary_report_top_findings.is_empty()).then_some(primary_report_top_findings)
+        })
+        .unwrap_or_else(|| find_top_codes(&findings));
     let summary = EvidenceSummary {
         compact: format!(
-            "gate status={status}; kind={}; receipts={}; validate_violations={}",
+            "gate status={status}; kind={}; receipts={}; validate_violations={}{}",
             gate_kind_slug(out.kind),
             out.receipts.len(),
-            out.validate.violations.len()
+            out.validate.violations.len(),
+            report_suffix,
         ),
-        top_findings: find_top_codes(&findings),
+        top_findings,
     };
-    let remediation = remediation_from_gate(out, blocking);
+    let remediation = if report_remediation.is_empty() {
+        remediation_from_gate(out, blocking)
+    } else {
+        dedupe_strings(report_remediation)
+            .into_iter()
+            .take(3)
+            .collect()
+    };
     let cost_class = simple_cost_class(blocking, findings.len(), artifacts.len());
     let evidence_ref = out
         .witness
