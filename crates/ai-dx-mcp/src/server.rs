@@ -7,6 +7,8 @@ use rmcp::{
     tool, tool_handler, tool_router,
 };
 
+mod ordered_router;
+
 #[derive(Clone)]
 pub struct AiDxServer {
     tool_router: ToolRouter<Self>,
@@ -170,13 +172,7 @@ impl AiDxServer {
     }
 }
 
-impl Default for AiDxServer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[tool_handler]
+#[tool_handler(router = ordered_router::OrderedToolRouter::new(&self.tool_router))]
 impl ServerHandler for AiDxServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
