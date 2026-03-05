@@ -2,6 +2,7 @@ pub mod api;
 pub mod app;
 pub mod checks;
 pub mod config;
+mod evidence;
 mod exceptions;
 mod failure_modes;
 mod gate_jobs;

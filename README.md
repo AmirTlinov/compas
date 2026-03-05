@@ -63,9 +63,9 @@ cargo run -p ai-dx-mcp -- validate ratchet
 
 Gate:
 ```bash
-cargo run -p ai-dx-mcp -- gate ci-fast
-cargo run -p ai-dx-mcp -- gate ci-fast --dry-run
-cargo run -p ai-dx-mcp -- gate ci-fast --write-witness
+cargo run -p ai-dx-mcp -- gate ci_fast
+cargo run -p ai-dx-mcp -- gate ci_fast --dry-run
+cargo run -p ai-dx-mcp -- gate ci_fast --write-witness
 ```
 
 Gate-invariants (fail-closed):
@@ -76,7 +76,7 @@ Gate-invariants (fail-closed):
 Через repo‑wrapper (`./dx`) те же маршруты:
 ```bash
 ./dx validate ratchet
-./dx ci-fast --dry-run
+./dx ci_fast --dry-run
 ./dx flagship --dry-run --write-witness
 ./dx docs-sync
 ./dx docs-sync --check
@@ -150,7 +150,7 @@ CLI возвращает ненулевой exit code, если `validate/gate` 
 
 ## Witness
 - При `--write-witness` gate пишет JSON в:
-  - `.agents/mcp/compas/witness/gate_ci-fast.json`
+  - `.agents/mcp/compas/witness/gate_ci_fast.json`
   - `.agents/mcp/compas/witness/gate_ci.json`
   - `.agents/mcp/compas/witness/gate_flagship.json`
 - Gate output включает:

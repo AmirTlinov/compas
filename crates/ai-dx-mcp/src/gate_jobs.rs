@@ -203,7 +203,7 @@ fn placeholder_validate(repo_root: &str) -> ValidateOutput {
     ValidateOutput {
         ok: true,
         error: None,
-        schema_version: "3".to_string(),
+        schema_version: "4".to_string(),
         repo_root: repo_root.to_string(),
         mode: ValidateMode::Ratchet,
         violations: vec![],
@@ -220,6 +220,7 @@ fn placeholder_validate(repo_root: &str) -> ValidateOutput {
         quality_posture: None,
         agent_digest: None,
         summary_md: None,
+        evidence: crate::api::EvidenceEnvelope::default(),
         payload_meta: None,
     }
 }
@@ -230,6 +231,8 @@ pub(crate) fn empty_validate_output(repo_root: &str) -> ValidateOutput {
 
 fn response_from_record(rec: &GateJobRecord) -> GateOutput {
     if let Some(mut out) = rec.result.clone() {
+        out.validate.evidence = crate::evidence::build_validate_envelope(&out.validate);
+        out.evidence = crate::evidence::build_gate_envelope(&out);
         out.job = Some(job_info(rec));
         out.job_state = Some(rec.state);
         out.job_error = rec.job_error.clone();
@@ -275,6 +278,7 @@ fn response_from_record(rec: &GateJobRecord) -> GateOutput {
         verdict: None,
         agent_digest: None,
         summary_md: None,
+        evidence: crate::api::EvidenceEnvelope::default(),
         payload_meta: None,
         job: Some(job_info(rec)),
         job_state: Some(rec.state),
@@ -298,6 +302,7 @@ fn job_not_found(repo_root: &str, kind: GateKind, job_id: &str) -> GateOutput {
         verdict: None,
         agent_digest: None,
         summary_md: None,
+        evidence: crate::api::EvidenceEnvelope::default(),
         payload_meta: None,
         job: None,
         job_state: None,
@@ -442,6 +447,7 @@ pub(crate) async fn start(
                 verdict: None,
                 agent_digest: None,
                 summary_md: None,
+                evidence: crate::api::EvidenceEnvelope::default(),
                 payload_meta: None,
                 job: None,
                 job_state: None,
@@ -506,6 +512,7 @@ pub(crate) async fn status(
                     verdict: None,
                     agent_digest: None,
                     summary_md: None,
+                    evidence: crate::api::EvidenceEnvelope::default(),
                     payload_meta: None,
                     job: None,
                     job_state: None,

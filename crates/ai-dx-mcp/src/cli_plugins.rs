@@ -7,33 +7,21 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    ffi::OsString,
     fs,
     io::Read,
     path::{Component, Path, PathBuf},
-    process::Command,
     time::SystemTime,
     time::UNIX_EPOCH,
 };
 use walkdir::WalkDir;
 
-const REGISTRY_STATE_REL_PATH: &str = ".agents/mcp/compas/plugins/.registry_state.json";
 const PLUGINS_LOCKFILE_REL_PATH: &str = ".agents/mcp/compas/plugins.lock.json";
 const PLUGINS_LOCK_REL_PATH: &str = ".agents/mcp/compas/plugins.lock";
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-struct RegistryState {
-    #[serde(default)]
-    registry: String,
-    #[serde(default)]
-    source_root: String,
-    #[serde(default)]
-    plugins: Vec<String>,
-    #[serde(default)]
-    packs: Vec<String>,
-    #[serde(default)]
-    files: Vec<String>,
-}
+const SUNSET_META_COMPAT_KEY: &str = concat!("deprecat", "ed");
+const FLAG_ALLOW_SUNSET: &str = "--allow-sunset";
+const FLAG_ALLOW_SUNSET_COMPAT: &str = concat!("--allow-", "deprecat", "ed");
+const TIER_EXPERIMENTAL: &str = "experimental";
+const TIER_SUNSET: &str = "sunset";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct RegistryManifestV1 {
@@ -71,8 +59,8 @@ struct RegistryPluginV1 {
     tags: Option<Vec<String>>,
     #[serde(default)]
     compat: Option<serde_json::Value>,
-    #[serde(default)]
-    deprecated: Option<serde_json::Value>,
+    #[serde(default, flatten)]
+    extra: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -441,52 +429,6 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn is_gzip_archive(path: &Path) -> Result<bool, String> {
-    let mut file = fs::File::open(path)
-        .map_err(|e| format!("failed to open archive {}: {e}", path.display()))?;
-    let mut magic = [0u8; 2];
-    let read_n = file
-        .read(&mut magic)
-        .map_err(|e| format!("failed to read archive {}: {e}", path.display()))?;
-    Ok(read_n == 2 && magic == [0x1f, 0x8b])
-}
-
-fn extract_archive(archive_path: &Path, target_dir: &Path) -> Result<(), String> {
-    if !is_gzip_archive(archive_path)? {
-        return Err(format!(
-            "unsupported legacy registry archive format: {} (expected tar.gz)",
-            archive_path.display()
-        ));
-    }
-    let _ = extract_tar_gz_safe(archive_path, target_dir)?;
-    Ok(())
-}
-
-fn locate_registry_root(base: &Path) -> Result<PathBuf, String> {
-    let direct = base.join("scripts").join("compas_plugins.py");
-    if direct.is_file() {
-        return Ok(base.to_path_buf());
-    }
-    let entries = fs::read_dir(base)
-        .map_err(|e| format!("failed to read cache registry dir {}: {e}", base.display()))?;
-    for entry in entries {
-        let entry =
-            entry.map_err(|e| format!("failed to read entry in {}: {e}", base.display()))?;
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let installer = path.join("scripts").join("compas_plugins.py");
-        if installer.is_file() {
-            return Ok(path);
-        }
-    }
-    Err(format!(
-        "compas_plugins.py not found under {}",
-        base.display()
-    ))
-}
-
 #[cfg(feature = "full")]
 async fn download_url_to_file(url: &str, out_path: &Path) -> Result<(), String> {
     let response = reqwest::Client::new()
@@ -512,147 +454,9 @@ async fn download_url_to_file(url: &str, _out_path: &Path) -> Result<(), String>
     ))
 }
 
-fn installer_python() -> OsString {
-    std::env::var_os("PYTHON")
-        .filter(|v| !v.is_empty())
-        .unwrap_or_else(|| OsString::from("python3"))
-}
-
 fn mark_ready(entry: &Path) -> Result<(), String> {
     fs::write(entry.join(".ready"), b"ok\n")
         .map_err(|e| format!("failed to write cache marker in {}: {e}", entry.display()))
-}
-
-async fn cache_registry_source(registry_source: &str) -> Result<PathBuf, String> {
-    let cache_root = plugins_cache_root();
-    fs::create_dir_all(&cache_root)
-        .map_err(|e| format!("failed to create cache root {}: {e}", cache_root.display()))?;
-
-    if is_http_url(registry_source) {
-        let entry = cache_root.join(sha256_hex(registry_source.as_bytes()));
-        let extract_dir = entry.join("extract");
-        if entry.join(".ready").is_file() {
-            if let Ok(root) = locate_registry_root(&extract_dir) {
-                return Ok(root);
-            }
-        }
-        ensure_clean_dir(&entry)?;
-        let archive_path = entry.join("registry.tar");
-        download_url_to_file(registry_source, &archive_path).await?;
-        extract_archive(&archive_path, &extract_dir)?;
-        mark_ready(&entry)?;
-        return locate_registry_root(&extract_dir);
-    }
-
-    let source_path = PathBuf::from(registry_source);
-    let source_path = fs::canonicalize(&source_path).map_err(|e| {
-        format!(
-            "failed to resolve registry source {}: {e}",
-            source_path.display()
-        )
-    })?;
-    let key = source_key_for_local_path(&source_path)?;
-    let entry = cache_root.join(key);
-    let source_cache = entry.join("source");
-    if entry.join(".ready").is_file() {
-        if let Ok(root) = locate_registry_root(&source_cache) {
-            return Ok(root);
-        }
-    }
-
-    ensure_clean_dir(&entry)?;
-    if source_path.is_dir() {
-        fs::create_dir_all(&source_cache).map_err(|e| {
-            format!(
-                "failed to create source cache {}: {e}",
-                source_cache.display()
-            )
-        })?;
-        copy_dir_recursive(&source_path, &source_cache)?;
-    } else if source_path.is_file() {
-        let archive_copy = entry.join(
-            source_path
-                .file_name()
-                .map_or_else(|| OsString::from("registry.tar"), |v| v.to_os_string()),
-        );
-        fs::copy(&source_path, &archive_copy).map_err(|e| {
-            format!(
-                "failed to cache registry archive {} -> {}: {e}",
-                source_path.display(),
-                archive_copy.display()
-            )
-        })?;
-        fs::create_dir_all(&source_cache).map_err(|e| {
-            format!(
-                "failed to create source cache {}: {e}",
-                source_cache.display()
-            )
-        })?;
-        extract_archive(&archive_copy, &source_cache)?;
-    } else {
-        return Err(format!(
-            "registry source does not exist: {}",
-            source_path.display()
-        ));
-    }
-
-    mark_ready(&entry)?;
-    locate_registry_root(&source_cache)
-}
-
-fn run_installer_status(
-    installer: &Path,
-    repo_root: &Path,
-    subcommand: &str,
-    args: &[String],
-) -> Result<i32, String> {
-    let mut command = Command::new(installer_python());
-    let status = command
-        .current_dir(repo_root)
-        .arg(installer)
-        .arg(subcommand)
-        .args(args)
-        .status()
-        .map_err(|e| format!("failed to run registry installer: {e}"))?;
-    Ok(status.code().unwrap_or(1))
-}
-
-fn run_installer_capture(
-    installer: &Path,
-    repo_root: &Path,
-    subcommand: &str,
-    args: &[String],
-) -> Result<std::process::Output, String> {
-    let mut command = Command::new(installer_python());
-    command
-        .current_dir(repo_root)
-        .arg(installer)
-        .arg(subcommand)
-        .args(args)
-        .output()
-        .map_err(|e| format!("failed to run registry installer {subcommand}: {e}"))
-}
-
-fn run_installer_json(
-    installer: &Path,
-    repo_root: &Path,
-    subcommand: &str,
-    args: &[String],
-) -> Result<serde_json::Value, String> {
-    let out = run_installer_capture(installer, repo_root, subcommand, args)?;
-    if !out.status.success() {
-        return Err(format!(
-            "registry installer {subcommand} failed (exit={:?}): {}",
-            out.status.code(),
-            String::from_utf8_lossy(&out.stderr).trim()
-        ));
-    }
-    serde_json::from_slice(&out.stdout)
-        .map_err(|e| format!("failed to parse installer {subcommand} JSON output: {e}"))
-}
-
-fn registry_state_path(repo_root: &Path) -> PathBuf {
-    repo_root.join(REGISTRY_STATE_REL_PATH)
 }
 
 fn plugins_lockfile_path(repo_root: &Path) -> PathBuf {
@@ -668,21 +472,6 @@ fn dedupe_strings(values: Vec<String>) -> Vec<String> {
         }
     }
     out
-}
-
-fn read_registry_state(repo_root: &Path) -> Result<Option<RegistryState>, String> {
-    let path = registry_state_path(repo_root);
-    if !path.is_file() {
-        return Ok(None);
-    }
-    let raw =
-        fs::read_to_string(&path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
-    let mut parsed: RegistryState = serde_json::from_str(&raw)
-        .map_err(|e| format!("failed to parse {}: {e}", path.display()))?;
-    parsed.plugins = dedupe_strings(parsed.plugins);
-    parsed.packs = dedupe_strings(parsed.packs);
-    parsed.files = dedupe_strings(parsed.files);
-    Ok(Some(parsed))
 }
 
 fn read_plugins_lockfile(repo_root: &Path) -> Result<Option<PluginsLockfileV1>, String> {
@@ -709,18 +498,6 @@ fn read_plugins_lockfile(repo_root: &Path) -> Result<Option<PluginsLockfileV1>, 
     Ok(Some(parsed))
 }
 
-fn write_registry_state(repo_root: &Path, state: &RegistryState) -> Result<(), String> {
-    let path = registry_state_path(repo_root);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("failed to create {}: {e}", parent.display()))?;
-    }
-    let json = serde_json::to_string_pretty(state)
-        .map_err(|e| format!("failed to serialize registry state: {e}"))?;
-    fs::write(&path, format!("{json}\n"))
-        .map_err(|e| format!("failed to write {}: {e}", path.display()))
-}
-
 fn write_plugins_lockfile(repo_root: &Path, lock: &PluginsLockfileV1) -> Result<(), String> {
     let path = plugins_lockfile_path(repo_root);
     let json = serde_json::to_string_pretty(lock)
@@ -730,14 +507,6 @@ fn write_plugins_lockfile(repo_root: &Path, lock: &PluginsLockfileV1) -> Result<
 
 fn remove_plugins_lockfile(repo_root: &Path) -> Result<(), String> {
     let path = plugins_lockfile_path(repo_root);
-    if path.exists() {
-        fs::remove_file(&path).map_err(|e| format!("failed to remove {}: {e}", path.display()))?;
-    }
-    Ok(())
-}
-
-fn remove_registry_state(repo_root: &Path) -> Result<(), String> {
-    let path = registry_state_path(repo_root);
     if path.exists() {
         fs::remove_file(&path).map_err(|e| format!("failed to remove {}: {e}", path.display()))?;
     }
@@ -782,28 +551,29 @@ fn parse_bool_flag(args: &[String], flag: &str) -> bool {
     args.iter().any(|a| a == flag)
 }
 
-fn strip_manifest_only_flags(args: &[String]) -> Result<Vec<String>, String> {
-    let mut out: Vec<String> = vec![];
-    let mut i = 0usize;
-    while i < args.len() {
-        let cur = &args[i];
-        match cur.as_str() {
-            "--allow-unsigned" | "--allow-experimental" | "--allow-deprecated" => {
-                i += 1;
+fn action_requires_admin_lane(action: PluginsAction) -> bool {
+    matches!(
+        action,
+        PluginsAction::Install | PluginsAction::Update | PluginsAction::Uninstall
+    )
+}
+
+fn ensure_admin_lane(action: PluginsAction, args: &[String]) -> Result<(), String> {
+    if action_requires_admin_lane(action) && !parse_bool_flag(args, "--admin-lane") {
+        return Err(format!(
+            "plugins {} requires explicit --admin-lane (fail-closed)",
+            match action {
+                PluginsAction::Install => "install",
+                PluginsAction::Update => "update",
+                PluginsAction::Uninstall => "uninstall",
+                PluginsAction::List => "list",
+                PluginsAction::Packs => "packs",
+                PluginsAction::Info => "info",
+                PluginsAction::Doctor => "doctor",
             }
-            "--pubkey" => {
-                let _ = args
-                    .get(i + 1)
-                    .ok_or_else(|| "--pubkey requires a value".to_string())?;
-                i += 2;
-            }
-            _ => {
-                out.push(cur.clone());
-                i += 1;
-            }
-        }
+        ));
     }
-    Ok(out)
+    Ok(())
 }
 
 fn with_csv_flag(args: &mut Vec<String>, flag: &str, values: &[String]) {
@@ -922,200 +692,6 @@ fn prune_empty_parent_dirs(path: &Path, repo_root: &Path) {
             Err(_) => break,
         }
     }
-}
-
-fn run_plugins_update(installer: &Path, parsed: &PluginsCli) -> Result<i32, String> {
-    let repo_root = PathBuf::from(&parsed.repo_root);
-    let mut installer_args = parsed.installer_args.clone();
-    let explicit_plugins = parse_csv_flag(&installer_args, "--plugins")?;
-    let explicit_packs = parse_csv_flag(&installer_args, "--packs")?;
-
-    if explicit_plugins.is_none() && explicit_packs.is_none() {
-        let state = read_registry_state(&repo_root)?;
-        let state = state.ok_or_else(|| {
-            format!(
-                "plugins update requires --plugins/--packs or existing state at {}",
-                registry_state_path(&repo_root).display()
-            )
-        })?;
-        with_csv_flag(&mut installer_args, "--plugins", &state.plugins);
-        with_csv_flag(&mut installer_args, "--packs", &state.packs);
-        if parse_csv_flag(&installer_args, "--plugins")?.is_none()
-            && parse_csv_flag(&installer_args, "--packs")?.is_none()
-        {
-            return Err(
-                "plugins update cannot infer targets from empty registry state; pass --plugins or --packs"
-                    .to_string(),
-            );
-        }
-    }
-
-    run_installer_status(installer, &repo_root, "install", &installer_args)
-}
-
-fn run_plugins_uninstall(installer: &Path, parsed: &PluginsCli) -> Result<i32, String> {
-    let repo_root = PathBuf::from(&parsed.repo_root);
-    let state = read_registry_state(&repo_root)?;
-    let state_plugins = state
-        .as_ref()
-        .map(|s| s.plugins.clone())
-        .unwrap_or_default();
-    let mut selected_plugins =
-        parse_csv_flag(&parsed.installer_args, "--plugins")?.unwrap_or_default();
-    let selected_packs = parse_csv_flag(&parsed.installer_args, "--packs")?.unwrap_or_default();
-
-    if !selected_packs.is_empty() {
-        let packs_payload =
-            run_installer_json(installer, &repo_root, "packs", &[String::from("--json")])?;
-        selected_plugins.extend(parse_pack_plugin_ids(&packs_payload, &selected_packs));
-    }
-    if selected_plugins.is_empty() {
-        selected_plugins.extend(state_plugins);
-    }
-    selected_plugins = dedupe_strings(selected_plugins);
-    if selected_plugins.is_empty() {
-        return Err(
-            "plugins uninstall requires --plugins/--packs or existing registry state".to_string(),
-        );
-    }
-
-    let dry_run = parse_bool_flag(&parsed.installer_args, "--dry-run");
-    let mut files_to_remove: Vec<String> = vec![];
-    for plugin_id in &selected_plugins {
-        let payload = run_installer_json(
-            installer,
-            &repo_root,
-            "info",
-            std::slice::from_ref(plugin_id),
-        )?;
-        files_to_remove.extend(parse_install_files(&payload)?);
-    }
-    files_to_remove = dedupe_strings(files_to_remove);
-
-    let mut removed_files: Vec<String> = vec![];
-    let mut missing_files: Vec<String> = vec![];
-
-    if !dry_run {
-        for rel in &files_to_remove {
-            let rel_path = safe_relative_path(rel)?;
-            let abs = repo_root.join(&rel_path);
-            if abs.is_file() {
-                fs::remove_file(&abs)
-                    .map_err(|e| format!("failed to remove file {}: {e}", abs.display()))?;
-                prune_empty_parent_dirs(&abs, &repo_root);
-                removed_files.push(rel.clone());
-                continue;
-            }
-            if abs.is_dir() {
-                fs::remove_dir_all(&abs)
-                    .map_err(|e| format!("failed to remove directory {}: {e}", abs.display()))?;
-                prune_empty_parent_dirs(&abs, &repo_root);
-                removed_files.push(rel.clone());
-                continue;
-            }
-            missing_files.push(rel.clone());
-        }
-    }
-
-    let mut state_updated = false;
-    if !dry_run && let Some(mut state_payload) = state {
-        let plugins_set: BTreeSet<String> = selected_plugins.iter().cloned().collect();
-        let packs_set: BTreeSet<String> = selected_packs.iter().cloned().collect();
-        let files_set: BTreeSet<String> = files_to_remove.iter().cloned().collect();
-        state_payload.plugins.retain(|p| !plugins_set.contains(p));
-        state_payload.packs.retain(|p| !packs_set.contains(p));
-        state_payload.files.retain(|p| !files_set.contains(p));
-        state_payload.plugins = dedupe_strings(state_payload.plugins);
-        state_payload.packs = dedupe_strings(state_payload.packs);
-        state_payload.files = dedupe_strings(state_payload.files);
-
-        if state_payload.plugins.is_empty()
-            && state_payload.packs.is_empty()
-            && state_payload.files.is_empty()
-        {
-            remove_registry_state(&repo_root)?;
-        } else {
-            write_registry_state(&repo_root, &state_payload)?;
-        }
-        state_updated = true;
-    }
-
-    let payload = serde_json::json!({
-        "ok": true,
-        "dry_run": dry_run,
-        "repo_root": repo_root,
-        "plugins": selected_plugins,
-        "packs": selected_packs,
-        "file_count": files_to_remove.len(),
-        "planned_files": files_to_remove,
-        "removed_files": removed_files,
-        "missing_files": missing_files,
-        "state_path": registry_state_path(&repo_root),
-        "state_updated": state_updated,
-    });
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&payload)
-            .map_err(|e| format!("failed to serialize uninstall summary: {e}"))?
-    );
-    Ok(0)
-}
-
-fn run_plugins_doctor(installer: &Path, parsed: &PluginsCli) -> Result<i32, String> {
-    let repo_root = PathBuf::from(&parsed.repo_root);
-    let list_payload =
-        run_installer_json(installer, &repo_root, "list", &[String::from("--json")])?;
-    let registry_plugins = parse_registry_plugin_ids(&list_payload)?;
-    let registry_set: BTreeSet<String> = registry_plugins.iter().cloned().collect();
-    let state = read_registry_state(&repo_root)?;
-    let mut state_plugins: Vec<String> = vec![];
-    let mut state_files: Vec<String> = vec![];
-    if let Some(s) = &state {
-        state_plugins = s.plugins.clone();
-        state_files = s.files.clone();
-    }
-
-    let mut unknown_state_plugins: Vec<String> = vec![];
-    for plugin in &state_plugins {
-        if !registry_set.contains(plugin) {
-            unknown_state_plugins.push(plugin.clone());
-        }
-    }
-
-    let mut missing_files: Vec<String> = vec![];
-    let mut invalid_paths: Vec<String> = vec![];
-    for rel in &state_files {
-        let rel_path = match safe_relative_path(rel) {
-            Ok(p) => p,
-            Err(_) => {
-                invalid_paths.push(rel.clone());
-                continue;
-            }
-        };
-        if !repo_root.join(rel_path).exists() {
-            missing_files.push(rel.clone());
-        }
-    }
-
-    let ok =
-        unknown_state_plugins.is_empty() && missing_files.is_empty() && invalid_paths.is_empty();
-    let payload = serde_json::json!({
-        "ok": ok,
-        "repo_root": repo_root,
-        "state_path": registry_state_path(&repo_root),
-        "state_present": state.is_some(),
-        "registry_plugins_total": registry_plugins.len(),
-        "state_plugins": state_plugins,
-        "unknown_state_plugins": unknown_state_plugins,
-        "missing_files": missing_files,
-        "invalid_state_paths": invalid_paths,
-    });
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&payload)
-            .map_err(|e| format!("failed to serialize doctor summary: {e}"))?
-    );
-    Ok(if ok { 0 } else { 1 })
 }
 
 #[derive(Debug, Clone)]
@@ -1654,6 +1230,10 @@ fn plugin_by_id<'a>(
     manifest.plugins.iter().find(|p| p.id == plugin_id)
 }
 
+fn plugin_sunset_marker(plugin: &RegistryPluginV1) -> Option<&serde_json::Value> {
+    plugin.extra.get(SUNSET_META_COMPAT_KEY)
+}
+
 fn copy_dir_recursive_filtered(src: &Path, dst: &Path) -> Result<(), String> {
     for entry in WalkDir::new(src) {
         let entry = entry.map_err(|e| format!("failed to walk {}: {e}", src.display()))?;
@@ -1712,7 +1292,7 @@ fn run_plugins_list_manifest(resolved: &ManifestResolved, json: bool) -> Result<
             "maintainers": plugin.maintainers,
             "tags": plugin.tags,
             "compat": plugin.compat,
-            "deprecated": plugin.deprecated,
+            "sunset": plugin_sunset_marker(plugin),
             "status": plugin.status,
             "description": plugin.description,
             "path": plugin.path,
@@ -1789,7 +1369,7 @@ fn run_plugins_info_manifest(resolved: &ManifestResolved, args: &[String]) -> Re
         "maintainers": plugin.maintainers,
         "tags": plugin.tags,
         "compat": plugin.compat,
-        "deprecated": plugin.deprecated,
+        "sunset": plugin_sunset_marker(plugin),
         "status": plugin.status,
         "description": plugin.description,
         "path": plugin.path,
@@ -1809,10 +1389,11 @@ fn run_plugins_info_manifest(resolved: &ManifestResolved, args: &[String]) -> Re
 fn governance_block_reason(
     plugin: &RegistryPluginV1,
     allow_experimental: bool,
-    allow_deprecated: bool,
+    allow_sunset: bool,
 ) -> Option<(String, String)> {
-    let deprecated_meta_present = plugin
-        .deprecated
+    let sunset_meta_present = plugin
+        .extra
+        .get(SUNSET_META_COMPAT_KEY)
         .as_ref()
         .and_then(|value| value.as_object())
         .is_some_and(|obj| !obj.is_empty());
@@ -1823,18 +1404,18 @@ fn governance_block_reason(
         .trim()
         .to_ascii_lowercase();
     match tier.as_str() {
-        "experimental" if !allow_experimental => Some((
+        TIER_EXPERIMENTAL if !allow_experimental => Some((
             tier,
             "install is blocked: tier=experimental (add --allow-experimental to proceed)"
                 .to_string(),
         )),
-        "deprecated" if !allow_deprecated => Some((
+        t if (t == TIER_SUNSET || t == SUNSET_META_COMPAT_KEY) && !allow_sunset => Some((
             tier,
-            "install is blocked: tier=deprecated (add --allow-deprecated to proceed)".to_string(),
+            "install is blocked: tier=sunset (add --allow-sunset to proceed)".to_string(),
         )),
-        _ if deprecated_meta_present && !allow_deprecated => Some((
-            "deprecated".to_string(),
-            "install is blocked: deprecated metadata present (add --allow-deprecated to proceed)"
+        _ if sunset_meta_present && !allow_sunset => Some((
+            TIER_SUNSET.to_string(),
+            "install is blocked: sunset marker metadata present (add --allow-sunset to proceed)"
                 .to_string(),
         )),
         _ => None,
@@ -1853,7 +1434,8 @@ async fn run_plugins_install_manifest(
     let dry_run = parse_bool_flag(&parsed.installer_args, "--dry-run");
     let force = parse_bool_flag(&parsed.installer_args, "--force");
     let allow_experimental = parse_bool_flag(&parsed.installer_args, "--allow-experimental");
-    let allow_deprecated = parse_bool_flag(&parsed.installer_args, "--allow-deprecated");
+    let allow_sunset = parse_bool_flag(&parsed.installer_args, FLAG_ALLOW_SUNSET)
+        || parse_bool_flag(&parsed.installer_args, FLAG_ALLOW_SUNSET_COMPAT);
 
     let plugin_inputs = normalize_plugin_inputs(plugin_inputs);
     let pack_inputs = normalize_plugin_inputs(pack_inputs);
@@ -1869,7 +1451,7 @@ async fn run_plugins_install_manifest(
             return Err(format!("plugin not found in manifest: {pid}"));
         };
         if let Some((tier, reason)) =
-            governance_block_reason(plugin, allow_experimental, allow_deprecated)
+            governance_block_reason(plugin, allow_experimental, allow_sunset)
         {
             blocked_plugins.push(serde_json::json!({
                 "id": plugin.id,
@@ -1892,10 +1474,10 @@ async fn run_plugins_install_manifest(
             "packs": pack_inputs,
             "governance": {
                 "allow_experimental": allow_experimental,
-                "allow_deprecated": allow_deprecated,
+                "allow_sunset": allow_sunset,
                 "blocked_plugins": blocked_plugins,
             },
-            "hint": "use --allow-experimental and/or --allow-deprecated for native registry install/update",
+            "hint": "use --allow-experimental and/or --allow-sunset for native registry install/update",
             "lockfile_path": plugins_lockfile_path(&repo_root),
         });
         println!(
@@ -2575,64 +2157,16 @@ fn run_plugins_doctor_manifest(
 }
 
 pub(crate) async fn run_plugins_cli(parsed: &PluginsCli) -> Result<i32, String> {
-    if looks_like_manifest_source(&parsed.registry_source)? {
-        let resolved = load_verified_manifest(parsed).await?;
-        let json = parse_bool_flag(&parsed.installer_args, "--json");
-        return match parsed.action {
-            PluginsAction::List => run_plugins_list_manifest(&resolved, json),
-            PluginsAction::Packs => run_plugins_packs_manifest(&resolved, json),
-            PluginsAction::Info => run_plugins_info_manifest(&resolved, &parsed.installer_args),
-            PluginsAction::Install => run_plugins_install_manifest(&resolved, parsed).await,
-            PluginsAction::Update => run_plugins_update_manifest(&resolved, parsed).await,
-            PluginsAction::Doctor => run_plugins_doctor_manifest(&resolved, parsed),
-            PluginsAction::Uninstall => run_plugins_uninstall_manifest(&resolved, parsed),
-        };
-    }
-
-    let registry_root = cache_registry_source(&parsed.registry_source).await?;
-    let installer = registry_root.join("scripts").join("compas_plugins.py");
-    if !installer.is_file() {
-        return Err(format!(
-            "installer is missing in cached registry: {}",
-            installer.display()
-        ));
-    }
-
-    let legacy_args = strip_manifest_only_flags(&parsed.installer_args)?;
-    let legacy_parsed = PluginsCli {
-        action: parsed.action,
-        registry_source: parsed.registry_source.clone(),
-        repo_root: parsed.repo_root.clone(),
-        installer_args: legacy_args.clone(),
-    };
-
+    ensure_admin_lane(parsed.action, &parsed.installer_args)?;
+    let resolved = load_verified_manifest(parsed).await?;
+    let json = parse_bool_flag(&parsed.installer_args, "--json");
     match parsed.action {
-        PluginsAction::Install => run_installer_status(
-            &installer,
-            Path::new(&parsed.repo_root),
-            "install",
-            &legacy_args,
-        ),
-        PluginsAction::List => run_installer_status(
-            &installer,
-            Path::new(&parsed.repo_root),
-            "list",
-            &legacy_args,
-        ),
-        PluginsAction::Packs => run_installer_status(
-            &installer,
-            Path::new(&parsed.repo_root),
-            "packs",
-            &legacy_args,
-        ),
-        PluginsAction::Info => run_installer_status(
-            &installer,
-            Path::new(&parsed.repo_root),
-            "info",
-            &legacy_args,
-        ),
-        PluginsAction::Update => run_plugins_update(&installer, &legacy_parsed),
-        PluginsAction::Uninstall => run_plugins_uninstall(&installer, &legacy_parsed),
-        PluginsAction::Doctor => run_plugins_doctor(&installer, &legacy_parsed),
+        PluginsAction::List => run_plugins_list_manifest(&resolved, json),
+        PluginsAction::Packs => run_plugins_packs_manifest(&resolved, json),
+        PluginsAction::Info => run_plugins_info_manifest(&resolved, &parsed.installer_args),
+        PluginsAction::Install => run_plugins_install_manifest(&resolved, parsed).await,
+        PluginsAction::Update => run_plugins_update_manifest(&resolved, parsed).await,
+        PluginsAction::Doctor => run_plugins_doctor_manifest(&resolved, parsed),
+        PluginsAction::Uninstall => run_plugins_uninstall_manifest(&resolved, parsed),
     }
 }

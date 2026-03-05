@@ -4,7 +4,7 @@
 Довести `gate` до более эксплуатационного формата:
 - детерминированные receipts с `bytes + sha256` для stdout/stderr,
 - witness metadata + ротация файлов,
-- единый `./dx` маршрут для `validate/ci-fast/ci/flagship`.
+- единый `./dx` маршрут для `validate/ci_fast/ci/flagship`.
 
 ### Scope (touchpoints)
 - `crates/ai-dx-mcp/src/api.rs`
@@ -37,16 +37,16 @@
   - текущий witness-файл не удаляется.
 - `./dx` поддерживает:
   - `validate [ratchet|strict|warn]`,
-  - `gate <ci-fast|ci|flagship>`,
-  - шорткаты `ci-fast|ci|flagship`.
+  - `gate <ci_fast|ci|flagship>`,
+  - шорткаты `ci_fast|ci|flagship`.
 - CLI `ai-dx-mcp` для `--validate/--gate` возвращает ненулевой exit code при `ok=false`.
 
 ### Tests / Verify
 - `cargo test -p ai-dx-mcp`
 - `cargo run -p ai-dx-mcp -- validate ratchet`
-- `cargo run -p ai-dx-mcp -- gate ci-fast --dry-run`
+- `cargo run -p ai-dx-mcp -- gate ci_fast --dry-run`
 - `./dx validate ratchet`
-- `./dx ci-fast --dry-run --write-witness`
+- `./dx ci_fast --dry-run --write-witness`
 
 ### Blockers
 - нет
@@ -59,9 +59,9 @@
 ### Proof
 - CMD: `cargo test -p ai-dx-mcp`
 - CMD: `cargo run -p ai-dx-mcp -- validate ratchet`
-- CMD: `cargo run -p ai-dx-mcp -- gate ci-fast --dry-run`
+- CMD: `cargo run -p ai-dx-mcp -- gate ci_fast --dry-run`
 - CMD: `./dx validate ratchet`
-- CMD: `./dx ci-fast --dry-run --write-witness`
+- CMD: `./dx ci_fast --dry-run --write-witness`
 - FILE: `dx`
 - FILE: `docs/plans/mcp-compas-ai-dx/Slice-5.md`
 

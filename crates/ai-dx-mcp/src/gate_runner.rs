@@ -37,7 +37,7 @@ fn gate_fail(
     let digest = verdict
         .as_ref()
         .map(|v| build_agent_digest(&v.decision, &receipt_violations, &validate.findings_v2));
-    GateOutput {
+    let mut out = GateOutput {
         ok: false,
         error: Some(error),
         repo_root: repo_root.to_string(),
@@ -49,11 +49,15 @@ fn gate_fail(
         verdict,
         agent_digest: digest,
         summary_md: None,
+        evidence: crate::api::EvidenceEnvelope::default(),
         payload_meta: None,
         job: None,
         job_state: None,
         job_error: None,
-    }
+    };
+    out.validate.evidence = crate::evidence::build_validate_envelope(&out.validate);
+    out.evidence = crate::evidence::build_gate_envelope(&out);
+    out
 }
 
 fn ensure_gate_sequence_invariants(kind: GateKind, tool_ids: &[String]) -> Result<(), ApiError> {
@@ -577,7 +581,7 @@ pub(crate) async fn gate(
         &receipt_violations,
         &validate.findings_v2,
     );
-    let out = GateOutput {
+    let mut out = GateOutput {
         ok,
         error,
         repo_root: repo_root.to_string(),
@@ -589,11 +593,14 @@ pub(crate) async fn gate(
         verdict: Some(verdict),
         agent_digest: Some(gate_digest),
         summary_md: None,
+        evidence: crate::api::EvidenceEnvelope::default(),
         payload_meta: None,
         job: None,
         job_state: None,
         job_error: None,
     };
+    out.validate.evidence = crate::evidence::build_validate_envelope(&out.validate);
+    out.evidence = crate::evidence::build_gate_envelope(&out);
     maybe_write_gate_witness(Path::new(repo_root), kind, effective_write_witness, out)
 }
 

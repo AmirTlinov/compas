@@ -661,8 +661,30 @@ pub(crate) fn ingest_tool_report(
         });
     }
 
+    let top_findings: Vec<String> = findings_json
+        .iter()
+        .filter_map(|item| {
+            item.get("code")
+                .and_then(|v| v.as_str())
+                .map(ToString::to_string)
+        })
+        .take(3)
+        .collect();
+    let blocking_findings = violations
+        .iter()
+        .filter(|v| matches!(v.tier, ViolationTier::Blocking))
+        .count();
+    let compact_summary = format!(
+        "tool={tool_id}; findings={}; blocking={blocking_findings}",
+        findings_json.len()
+    );
+
     let report = json!({
         "findings": findings_json,
+        "summary": {
+            "compact": compact_summary,
+            "top_findings": top_findings,
+        },
         "evidence": {
             "report_path": report_path.display().to_string(),
             "report_sha256": report_sha,

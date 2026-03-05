@@ -29,7 +29,7 @@
 ### Tests / Verify
 - `cargo test -p ai-dx-mcp`
 - `cargo run -p ai-dx-mcp -- validate ratchet`
-- `./dx ci-fast --dry-run`
+- `./dx ci_fast --dry-run`
 
 ### Blockers
 - нет
@@ -42,7 +42,7 @@
 ### Proof
 - CMD: `cargo test -p ai-dx-mcp`
 - CMD: `cargo run -p ai-dx-mcp -- validate ratchet`
-- CMD: `./dx ci-fast --dry-run`
+- CMD: `./dx ci_fast --dry-run`
 - FILE: `.agents/mcp/compas/plugins/default/plugin.toml`
 - FILE: `tools/custom/cargo-test/tool.toml`
 - FILE: `crates/ai-dx-mcp/tests/repo_imports.rs`

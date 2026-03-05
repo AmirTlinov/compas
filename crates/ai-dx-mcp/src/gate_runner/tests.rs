@@ -32,7 +32,7 @@ fn mk_validate_output(ok: bool) -> ValidateOutput {
     ValidateOutput {
         ok,
         error: None,
-        schema_version: "3".to_string(),
+        schema_version: "4".to_string(),
         repo_root: ".".to_string(),
         mode: ValidateMode::Ratchet,
         violations: vec![],
@@ -49,6 +49,7 @@ fn mk_validate_output(ok: bool) -> ValidateOutput {
         quality_posture: None,
         agent_digest: None,
         summary_md: None,
+        evidence: crate::api::EvidenceEnvelope::default(),
         payload_meta: None,
     }
 }

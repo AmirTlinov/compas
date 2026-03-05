@@ -134,7 +134,7 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
         .expect("call validate");
     let validate: ValidateOutput = validate.into_typed().expect("typed validate");
     assert_eq!(validate.mode, ValidateMode::Warn);
-    assert_eq!(validate.schema_version, "3");
+    assert_eq!(validate.schema_version, "4");
     assert!(
         validate
             .summary_md
@@ -308,7 +308,7 @@ async fn mcp_env_defaults_repo_root_and_write_witness() {
         .expect("call validate");
     let validate: ValidateOutput = validate.into_typed().expect("typed validate");
     assert_eq!(validate.mode, ValidateMode::Warn);
-    assert_eq!(validate.schema_version, "3");
+    assert_eq!(validate.schema_version, "4");
     assert!(validate.verdict.is_some(), "verdict must be present");
     assert!(
         validate.quality_posture.is_some(),

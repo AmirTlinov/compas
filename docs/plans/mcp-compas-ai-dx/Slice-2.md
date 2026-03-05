@@ -39,12 +39,12 @@
   - `GateRequest.write_witness=true` пишет `.agents/mcp/compas/witness/gate_<kind>.json`.
   - при ошибке записи => `ApiError.code = witness.write_failed`.
 - CLI:
-  - `--gate <ci-fast|ci|flagship> [--dry-run] [--write-witness] [--repo-root <path>]` печатает `GateOutput` JSON.
+  - `--gate <ci_fast|ci|flagship> [--dry-run] [--write-witness] [--repo-root <path>]` печатает `GateOutput` JSON.
 
 ### Tests / Verify
 - `cargo test`
 - witness smoke:
-  - `cargo run -p ai-dx-mcp -- gate ci-fast --write-witness`
+  - `cargo run -p ai-dx-mcp -- gate ci_fast --write-witness`
   - ожидаем `witness_path` в JSON и файл по этому пути.
 
 ### Blockers
@@ -57,8 +57,8 @@
 
 ### Proof (заполнить при закрытии)
 - CMD: `cargo test`
-- CMD: `cargo run -p ai-dx-mcp -- gate ci-fast --write-witness`
-- FILE: `.agents/mcp/compas/witness/gate_ci-fast.json`
+- CMD: `cargo run -p ai-dx-mcp -- gate ci_fast --write-witness`
+- FILE: `.agents/mcp/compas/witness/gate_ci_fast.json`
 - FILE: `docs/plans/mcp-compas-ai-dx/Slice-2.md`
 
 ### Result

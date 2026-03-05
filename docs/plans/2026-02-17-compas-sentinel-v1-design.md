@@ -605,7 +605,7 @@ Loading: in `load_repo_config()`. Missing file = `config.quality_contract_missin
 
 - `cargo test -p ai-dx-mcp`
 - `cargo run -p ai-dx-mcp -- validate ratchet`
-- `./dx ci-fast --dry-run`
+- `./dx ci_fast --dry-run`
 - New: quality_delta gaming scenarios
 - New: witness chain verification
 

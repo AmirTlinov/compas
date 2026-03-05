@@ -244,6 +244,7 @@ pub(crate) async fn exec(repo_root: &str, req: &ToolsRunRequest) -> ToolsRunOutp
                 repo_root: repo_root.to_string(),
                 receipt: None,
                 summary_md: None,
+                evidence: crate::api::EvidenceEnvelope::default(),
                 payload_meta: None,
             };
         }
@@ -264,6 +265,7 @@ pub(crate) async fn exec(repo_root: &str, req: &ToolsRunRequest) -> ToolsRunOutp
                 repo_root: repo_root.to_string(),
                 receipt: None,
                 summary_md: None,
+                evidence: crate::api::EvidenceEnvelope::default(),
                 payload_meta: None,
             };
         }
@@ -311,6 +313,7 @@ pub(crate) async fn exec(repo_root: &str, req: &ToolsRunRequest) -> ToolsRunOutp
                 repo_root: repo_root.to_string(),
                 receipt: Some(receipt),
                 summary_md: None,
+                evidence: crate::api::EvidenceEnvelope::default(),
                 payload_meta: None,
             }
         }
@@ -323,6 +326,7 @@ pub(crate) async fn exec(repo_root: &str, req: &ToolsRunRequest) -> ToolsRunOutp
             repo_root: repo_root.to_string(),
             receipt: None,
             summary_md: None,
+            evidence: crate::api::EvidenceEnvelope::default(),
             payload_meta: None,
         },
     }

@@ -3,7 +3,7 @@
 Этот документ фиксирует **режимы отказа (failure modes)**, характерные для разработки ПО, когда код пишут **только ИИ‑агенты**, а человек **не читает/не правит код руками**.
 
 Контекст (на базе анализа Intent):
-- Репо живёт на локальных гейтах (`./dx ci-fast/ci/flagship`) и детерминированных witness‑артефактах.
+- Репо живёт на локальных гейтах (`./dx ci_fast/ci/flagship`) и детерминированных witness‑артефактах.
 - Цель: *AI‑native DX*, где нормы — это **исполняемые контракты**, а не “красивые правила в Markdown”.
 - Риск‑профиль: высокий дрейф (агенты оптимизируют “сейчас работает”), поэтому нужен **ratchet** (не ухудшать) + **fail‑closed** на критичных инвариантах.
 
@@ -151,7 +151,7 @@
 ### 3.2. Публичные MCP методы (минимальный API)
 
 - `validate({mode: ratchet|strict|warn, repo_root, profile}) -> Report`
-- `gate({kind: ci-fast|ci|flagship, repo_root}) -> GateResult + witness`
+- `gate({kind: ci_fast|ci|flagship, repo_root}) -> GateResult + witness`
 - `plugins.list({repo_root}) -> [PluginInfo]`
 - `plugins.describe({plugin_id}) -> PluginSpec`
 - `tools.list({repo_root}) -> [Tool]`
@@ -215,7 +215,7 @@
 ## 4) Практический MVP‑план внедрения (без “второго монстра”)
 
 1) Start config‑only: встроенные checks + plugin.toml.
-2) Встроить `./dx validate` (или `compas validate`) в `ci-fast` и `flagship`.
+2) Встроить `./dx validate` (или `compas validate`) в `ci_fast` и `flagship`.
 3) Добавить receipts + witness.
 4) Только после этого думать о code‑plugins.
 

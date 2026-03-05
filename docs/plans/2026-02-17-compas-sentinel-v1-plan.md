@@ -1341,7 +1341,7 @@ fn witness_chain_append_and_verify() {
     // First entry — genesis
     let entry1 = append_chain_entry(
         &chain_path,
-        "ci-fast",
+        "ci_fast",
         "abc123def456",
         true,
     )
@@ -1352,7 +1352,7 @@ fn witness_chain_append_and_verify() {
     // Second entry — links to first
     let entry2 = append_chain_entry(
         &chain_path,
-        "ci-fast",
+        "ci_fast",
         "def456abc789",
         true,
     )
@@ -1370,8 +1370,8 @@ fn witness_chain_detects_tampering() {
     let dir = tempfile::tempdir().unwrap();
     let chain_path = dir.path().join("chain.json");
 
-    append_chain_entry(&chain_path, "ci-fast", "aaa", true).unwrap();
-    append_chain_entry(&chain_path, "ci-fast", "bbb", true).unwrap();
+    append_chain_entry(&chain_path, "ci_fast", "aaa", true).unwrap();
+    append_chain_entry(&chain_path, "ci_fast", "bbb", true).unwrap();
 
     // Tamper: modify first entry's hash
     let mut chain = load_witness_chain(&chain_path).unwrap();

@@ -224,6 +224,7 @@ pub fn finalize_validate(mut out: ValidateOutput, mode: ResponseMode) -> Validat
         ResponseMode::Full => None,
     };
     out.summary_md = Some(validate_summary(&out));
+    out.evidence = crate::evidence::build_validate_envelope(&out);
     out
 }
 
@@ -253,6 +254,7 @@ pub fn finalize_gate(mut out: GateOutput, mode: ResponseMode) -> GateOutput {
         }
     }
     out.summary_md = Some(gate_summary(&out));
+    out.evidence = crate::evidence::build_gate_envelope(&out);
     out
 }
 
@@ -284,6 +286,7 @@ pub(crate) fn finalize_catalog(mut out: CatalogOutput, mode: ResponseMode) -> Ca
 
 pub fn finalize_exec(mut out: ToolsRunOutput) -> ToolsRunOutput {
     out.summary_md = Some(exec_summary(&out));
+    out.evidence = crate::evidence::build_exec_envelope(&out);
     out
 }
 
