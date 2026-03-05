@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+mod payload;
+use payload::project_summary;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
@@ -661,23 +663,12 @@ pub(crate) fn ingest_tool_report(
         });
     }
 
-    let top_findings: Vec<String> = findings_json
-        .iter()
-        .filter_map(|item| {
-            item.get("code")
-                .and_then(|v| v.as_str())
-                .map(ToString::to_string)
-        })
-        .take(3)
-        .collect();
     let blocking_findings = violations
         .iter()
         .filter(|v| matches!(v.tier, ViolationTier::Blocking))
         .count();
-    let compact_summary = format!(
-        "tool={tool_id}; findings={}; blocking={blocking_findings}",
-        findings_json.len()
-    );
+    let (compact_summary, top_findings, remediation) =
+        project_summary(tool_id, &text, &findings_json, blocking_findings);
 
     let report = json!({
         "findings": findings_json,
@@ -685,6 +676,7 @@ pub(crate) fn ingest_tool_report(
             "compact": compact_summary,
             "top_findings": top_findings,
         },
+        "remediation": remediation,
         "evidence": {
             "report_path": report_path.display().to_string(),
             "report_sha256": report_sha,
@@ -696,3 +688,5 @@ pub(crate) fn ingest_tool_report(
 
     (Some(report), violations)
 }
+#[cfg(test)]
+mod tests;

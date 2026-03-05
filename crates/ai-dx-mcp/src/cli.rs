@@ -1,5 +1,6 @@
-use ai_dx_mcp::api::{BaselineMaintenance, GateKind, InitRequest, ValidateMode};
+use ai_dx_mcp::api::{BaselineMaintenance, GateKind, ValidateMode};
 
+mod init_parse;
 #[path = "cli_plugins.rs"]
 mod plugins_impl;
 
@@ -8,7 +9,7 @@ const PLUGIN_REGISTRY_ENV: &str = "COMPAS_PLUGIN_REGISTRY";
 
 pub(crate) fn print_help() {
     println!(
-        "Usage:\n  compas_mcp help\n  compas_mcp version\n  compas_mcp init [--apply] [--packs <builtin:...,...>] [--repo-root <path>]\n  compas_mcp validate [ratchet|strict|warn] [--write-baseline] [--baseline-reason <text>] [--baseline-owner <id>] [--repo-root <path>]\n  compas_mcp gate [ci_fast|ci|flagship] [--dry-run] [--write-witness] [--repo-root <path>]\n  compas_mcp plugins [install|update|uninstall|list|packs|info|doctor] [--registry <url-or-path>] [--repo-root <path>] [--admin-lane] [--allow-experimental] [--allow-sunset] [-- <registry-installer-args...>]\n\nNotes:\n  - No args => start MCP server over stdio.\n  - v1-style flags --init/--validate/--gate are removed in v2.\n  - Defaults via env:\n      AI_DX_REPO_ROOT=<path>\n      AI_DX_WRITE_WITNESS=1|true\n      COMPAS_PLUGIN_REGISTRY=<url-or-path>\n\nExamples:\n  compas_mcp init --apply\n  compas_mcp validate ratchet\n  compas_mcp validate ratchet --write-baseline --baseline-reason \"Quarterly baseline refresh after policy change\" --baseline-owner team-lead\n  compas_mcp gate ci_fast --dry-run\n  compas_mcp plugins list -- --json\n  compas_mcp plugins packs -- --json\n  compas_mcp plugins info spec-adr-gate\n  compas_mcp plugins install --admin-lane --plugins spec-adr-gate\n  compas_mcp plugins install --admin-lane --plugins experimental-plugin --allow-experimental\n  compas_mcp plugins update --admin-lane --plugins sunset-plugin --allow-sunset\n"
+        "Usage:\n  compas_mcp help\n  compas_mcp version\n  compas_mcp init [--apply] [--profile <ai_first>] [--packs <builtin:...,...>] [--repo-root <path>]\n  compas_mcp validate [ratchet|strict|warn] [--write-baseline] [--baseline-reason <text>] [--baseline-owner <id>] [--repo-root <path>]\n  compas_mcp gate [ci_fast|ci|flagship] [--dry-run] [--write-witness] [--repo-root <path>]\n  compas_mcp plugins [install|update|uninstall|list|packs|info|doctor] [--registry <url-or-path>] [--repo-root <path>] [--admin-lane] [--allow-experimental] [--allow-sunset] [-- <registry-installer-args...>]\n\nNotes:\n  - No args => start MCP server over stdio.\n  - v1-style flags --init/--validate/--gate are removed in v2.\n  - Defaults via env:\n      AI_DX_REPO_ROOT=<path>\n      AI_DX_WRITE_WITNESS=1|true\n      COMPAS_PLUGIN_REGISTRY=<url-or-path>\n\nExamples:\n  compas_mcp init --apply\n  compas_mcp init --apply --profile ai_first\n  compas_mcp validate ratchet\n  compas_mcp validate ratchet --write-baseline --baseline-reason \"Quarterly baseline refresh after policy change\" --baseline-owner team-lead\n  compas_mcp gate ci_fast --dry-run\n  compas_mcp plugins list -- --json\n  compas_mcp plugins packs -- --json\n  compas_mcp plugins info spec-adr-gate\n  compas_mcp plugins install --admin-lane --plugins spec-adr-gate\n  compas_mcp plugins install --admin-lane --plugins experimental-plugin --allow-experimental\n  compas_mcp plugins update --admin-lane --plugins sunset-plugin --allow-sunset\n"
     );
 }
 
@@ -18,6 +19,8 @@ pub(crate) fn print_plugins_help() {
         DEFAULT_PLUGIN_REGISTRY_SOURCE
     );
 }
+
+pub(crate) use init_parse::parse_init_cli;
 
 fn default_repo_root(repo_root: Option<String>) -> String {
     repo_root
@@ -282,57 +285,4 @@ pub(crate) fn parse_gate_cli(args: &[String]) -> Result<(GateKind, bool, bool, S
             .ok()
             .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
     Ok((kind, dry_run, write_witness, default_repo_root(repo_root)))
-}
-
-pub(crate) fn parse_init_cli(args: &[String]) -> Result<(InitRequest, String), String> {
-    let mut apply = false;
-    let mut packs: Vec<String> = vec![];
-    let mut repo_root: Option<String> = None;
-
-    let mut i = 0usize;
-    while i < args.len() {
-        let a = &args[i];
-        match a.as_str() {
-            "--apply" => {
-                apply = true;
-                i += 1;
-            }
-            "--packs" => {
-                let v = args.get(i + 1).ok_or_else(|| {
-                    "--packs requires a value (e.g. builtin:rust,builtin:node)".to_string()
-                })?;
-                if v.starts_with("--") {
-                    return Err(
-                        "--packs requires a value (e.g. builtin:rust,builtin:node)".to_string()
-                    );
-                }
-                for p in v.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
-                    packs.push(p.to_string());
-                }
-                i += 2;
-            }
-            "--repo-root" => {
-                let v = args
-                    .get(i + 1)
-                    .ok_or_else(|| "--repo-root requires a value".to_string())?;
-                if v.starts_with("--") {
-                    return Err("--repo-root requires a value".to_string());
-                }
-                repo_root = Some(v.clone());
-                i += 2;
-            }
-            _ => return Err(format!("unknown argument: {a}")),
-        }
-    }
-
-    let repo_root = default_repo_root(repo_root);
-    Ok((
-        InitRequest {
-            repo_root: Some(repo_root.clone()),
-            apply: Some(apply),
-            packs: if packs.is_empty() { None } else { Some(packs) },
-            external_packs: None,
-        },
-        repo_root,
-    ))
 }

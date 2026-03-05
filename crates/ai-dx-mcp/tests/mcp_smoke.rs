@@ -206,14 +206,22 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
             .iter()
             .any(|w| w.path == "tools/custom/rust-test/tool.toml")
     );
+    assert!(
+        !plan.writes.iter().any(|w| w.path == "AGENTS.md"),
+        "repo-visible scaffold docs must stay explicit via profile"
+    );
 
     let init_apply = client
         .call_tool(CallToolRequestParams {
             meta: None,
             name: "compas.init".into(),
-            arguments: serde_json::json!({ "repo_root": tmp_root, "apply": true })
-                .as_object()
-                .cloned(),
+            arguments: serde_json::json!({
+                "repo_root": tmp_root,
+                "apply": true,
+                "profile": "ai_first"
+            })
+            .as_object()
+            .cloned(),
             task: None,
         })
         .await
@@ -237,6 +245,9 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
             .is_file()
     );
     assert!(dir.path().join(".agents/mcp/compas/packs.lock").is_file());
+    assert!(dir.path().join("AGENTS.md").is_file());
+    assert!(dir.path().join("ARCHITECTURE.md").is_file());
+    assert!(dir.path().join("docs/index.md").is_file());
 
     client.close().await.ok();
     server.close().await.ok();

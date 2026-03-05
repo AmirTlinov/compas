@@ -84,6 +84,21 @@ Gate-invariants (fail-closed):
 
 CLI возвращает ненулевой exit code, если `validate/gate` завершились с `ok=false`.
 
+## Explicit init profile: `ai_first`
+- `compas.init` / `compas_mcp init` stay conservative by default.
+- `profile=ai_first` opt-in scaffolds minimal repo-visible docs alongside the normal compas files:
+  - `AGENTS.md`
+  - `ARCHITECTURE.md`
+  - `docs/index.md`
+  - `docs/exec-plans/README.md`
+  - `docs/QUALITY_SCORE.md`
+
+Examples:
+```bash
+cargo run -p ai-dx-mcp -- init --profile ai_first --repo-root /path/to/repo
+cargo run -p ai-dx-mcp -- init --apply --profile ai_first --repo-root /path/to/repo
+```
+
 ## Проверки validate
 
 ### LOC ratchet
