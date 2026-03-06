@@ -96,6 +96,10 @@ pub struct RegistryPackRecommendationV1 {
     #[serde(default)]
     pub languages_all: Vec<String>,
     #[serde(default)]
+    pub signals_any: Vec<String>,
+    #[serde(default)]
+    pub signals_all: Vec<String>,
+    #[serde(default)]
     pub when_no_languages: bool,
 }
 
@@ -196,7 +200,24 @@ fn validate_pack_recommendation(
         1,
         true,
     )?;
-    if rec.languages_any.is_empty() && rec.languages_all.is_empty() && !rec.when_no_languages {
+    validate_token_list(
+        &rec.signals_any,
+        &format!("pack {pack_id} recommendation.signals_any"),
+        2,
+        true,
+    )?;
+    validate_token_list(
+        &rec.signals_all,
+        &format!("pack {pack_id} recommendation.signals_all"),
+        2,
+        true,
+    )?;
+    if rec.languages_any.is_empty()
+        && rec.languages_all.is_empty()
+        && rec.signals_any.is_empty()
+        && rec.signals_all.is_empty()
+        && !rec.when_no_languages
+    {
         return Err(format!(
             "pack {pack_id} recommendation must define at least one selector"
         ));

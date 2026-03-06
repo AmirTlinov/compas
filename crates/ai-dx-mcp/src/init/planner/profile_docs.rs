@@ -24,6 +24,10 @@ pub(super) fn profile_docs_writes(profile: Option<&str>) -> Result<Vec<InitWrite
                 include_str!("../templates/ai_first/docs/exec-plans/README.md"),
             ),
             (
+                "docs/exec-plans/TEMPLATE.md",
+                include_str!("../templates/ai_first/docs/exec-plans/TEMPLATE.md"),
+            ),
+            (
                 "docs/QUALITY_SCORE.md",
                 include_str!("../templates/ai_first/docs/QUALITY_SCORE.md"),
             ),

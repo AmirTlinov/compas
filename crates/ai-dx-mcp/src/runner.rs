@@ -242,6 +242,9 @@ mod tests {
             report: None,
             receipt_contract: None,
             env: BTreeMap::new(),
+            mutability: Default::default(),
+            compatible_gate_kinds: vec![],
+            evidence_kinds: vec![],
         };
 
         let receipt = run_project_tool(Path::new("."), &tool, &[], true)
@@ -287,6 +290,9 @@ mod tests {
             report: None,
             receipt_contract: None,
             env: BTreeMap::new(),
+            mutability: Default::default(),
+            compatible_gate_kinds: vec![],
+            evidence_kinds: vec![],
         };
 
         let receipt = tokio::time::timeout(

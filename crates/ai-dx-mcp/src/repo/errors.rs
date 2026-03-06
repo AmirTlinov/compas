@@ -64,6 +64,26 @@ pub enum RepoConfigError {
     },
     #[error("invalid tool command: {tool_id} (plugin {plugin_id})")]
     InvalidToolCommand { plugin_id: String, tool_id: String },
+    #[error("invalid tool mutability: {tool_id} (plugin {plugin_id}) -> {value}")]
+    InvalidToolMutability {
+        plugin_id: String,
+        tool_id: String,
+        value: String,
+    },
+    #[error(
+        "invalid compatible gate kinds: {tool_id} (plugin {plugin_id}) -> {value}"
+    )]
+    InvalidCompatibleGateKinds {
+        plugin_id: String,
+        tool_id: String,
+        value: String,
+    },
+    #[error("invalid evidence_kinds token: {tool_id} (plugin {plugin_id}) -> {value}")]
+    InvalidEvidenceKind {
+        plugin_id: String,
+        tool_id: String,
+        value: String,
+    },
     #[error(
         "tool command not allowed by policy: command={command} tool={tool_id} plugin={plugin_id} mode={mode} (fix: set [tool_policy].mode='allow_any' or add command to [tool_policy].allow_commands)"
     )]
@@ -81,6 +101,22 @@ pub enum RepoConfigError {
     EmptyPlugin { plugin_id: String },
     #[error("unknown gate tool reference: {tool_id} in {gate_kind} (plugin {plugin_id})")]
     UnknownGateTool {
+        plugin_id: String,
+        gate_kind: String,
+        tool_id: String,
+    },
+    #[error(
+        "tool {tool_id} (plugin {plugin_id}) is write-mutating and cannot be used in gate {gate_kind}"
+    )]
+    GateMutatingTool {
+        plugin_id: String,
+        gate_kind: String,
+        tool_id: String,
+    },
+    #[error(
+        "tool {tool_id} (plugin {plugin_id}) is not compatible with gate {gate_kind}"
+    )]
+    GateIncompatibleTool {
         plugin_id: String,
         gate_kind: String,
         tool_id: String,
@@ -112,6 +148,11 @@ impl RepoConfigError {
             RepoConfigError::DuplicateCheckId { .. } => "config.duplicate_check_id",
             RepoConfigError::InvalidDescription { .. } => "config.invalid_description",
             RepoConfigError::InvalidToolCommand { .. } => "config.invalid_tool_command",
+            RepoConfigError::InvalidToolMutability { .. } => "config.invalid_tool_mutability",
+            RepoConfigError::InvalidCompatibleGateKinds { .. } => {
+                "config.invalid_compatible_gate_kinds"
+            }
+            RepoConfigError::InvalidEvidenceKind { .. } => "config.invalid_evidence_kind",
             RepoConfigError::ToolCommandPolicyViolation { .. } => {
                 "config.tool_command_policy_violation"
             }
@@ -120,6 +161,8 @@ impl RepoConfigError {
             }
             RepoConfigError::EmptyPlugin { .. } => "config.empty_plugin",
             RepoConfigError::UnknownGateTool { .. } => "config.unknown_gate_tool",
+            RepoConfigError::GateMutatingTool { .. } => "config.gate_mutating_tool",
+            RepoConfigError::GateIncompatibleTool { .. } => "config.gate_incompatible_tool",
             RepoConfigError::MissingToolOwner { .. } => "config.missing_tool_owner",
             RepoConfigError::EmptyConfig => "config.empty",
         }

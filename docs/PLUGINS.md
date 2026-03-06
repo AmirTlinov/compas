@@ -6,6 +6,17 @@ Compas plugins are **repo-side configuration + adapters** that live under:
 
 - `.agents/mcp/compas/plugins/<plugin-id>/plugin.toml`
 
+Imported tool manifests can also declare proof-oriented metadata:
+
+- `mutability = read_only | worktree | write`
+- `compatible_gate_kinds = ["ci_fast" | "ci" | "flagship", ...]`
+- `evidence_kinds = ["receipt" | "structured_report" | "...", ...]`
+
+Core stays fail-closed:
+- `write` tools cannot be wired into any gate kind,
+- tools can be selected only for declared compatible gate kinds,
+- plugin installs remain policy mutations, not part of normal worker loop.
+
 The recommended way to install and update plugins is via the signed community registry:
 
 - `https://github.com/AmirTlinov/compas-plugin-registry`
@@ -142,3 +153,6 @@ Recovery guidance:
 - Treat plugins as **policy and evidence**, not as “nice-to-have tooling”.
 - Keep `ci_fast` lean: fast gates reduce agent “try random things” behavior.
 - Keep slow tools in `ci`/`flagship` or scheduled jobs; use compas `impact rules` to avoid wasting time.
+- Use `compas.init --apply --profile ai_first` when the repo should expose the canonical
+  AI-first scaffold; registry recommendations may then match explicit repo signals without
+  mutating install policy automatically.

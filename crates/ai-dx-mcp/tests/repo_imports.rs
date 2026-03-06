@@ -300,3 +300,116 @@ command = "totally-custom-cli"
     let cfg = load_repo_config(dir.path()).expect("allowlist override should pass");
     assert!(cfg.tools.contains_key("custom-tool"));
 }
+
+#[test]
+fn write_mutating_tool_cannot_be_wired_into_gate() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write(
+        &dir.path()
+            .join(".agents/mcp/compas/plugins/default/plugin.toml"),
+        r#"
+[plugin]
+id = "default"
+description = "Plugin for mutating gate denial test"
+
+[[tools]]
+id = "quality-score-sync"
+description = "Sync quality score managed block"
+command = "python3"
+mutability = "write"
+
+[gate]
+ci_fast = ["quality-score-sync"]
+"#,
+    );
+
+    let err = load_repo_config(dir.path()).expect_err("must fail on write tool in gate");
+    match err {
+        RepoConfigError::GateMutatingTool {
+            plugin_id,
+            tool_id,
+            gate_kind,
+        } => {
+            assert_eq!(plugin_id, "default");
+            assert_eq!(tool_id, "quality-score-sync");
+            assert_eq!(gate_kind, "ci_fast");
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
+}
+
+#[test]
+fn incompatible_gate_kind_fails_closed() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write(
+        &dir.path()
+            .join(".agents/mcp/compas/plugins/default/plugin.toml"),
+        r#"
+[plugin]
+id = "default"
+description = "Plugin for gate compatibility test"
+
+[[tools]]
+id = "runtime-smoke"
+description = "Runtime smoke tool only for ci"
+command = "python3"
+compatible_gate_kinds = ["ci"]
+
+[gate]
+ci_fast = ["runtime-smoke"]
+"#,
+    );
+
+    let err = load_repo_config(dir.path()).expect_err("must fail on incompatible gate kind");
+    match err {
+        RepoConfigError::GateIncompatibleTool {
+            plugin_id,
+            tool_id,
+            gate_kind,
+        } => {
+            assert_eq!(plugin_id, "default");
+            assert_eq!(tool_id, "runtime-smoke");
+            assert_eq!(gate_kind, "ci_fast");
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
+}
+
+#[test]
+fn imported_tool_metadata_fields_roundtrip_and_validate() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write(
+        &dir.path()
+            .join(".agents/mcp/compas/plugins/default/plugin.toml"),
+        r#"
+[plugin]
+id = "default"
+description = "Default plugin for imported metadata tool test"
+tool_import_globs = ["tools/custom/**/tool.toml"]
+
+[gate]
+ci = ["runtime-smoke"]
+"#,
+    );
+    write(
+        &dir.path().join("tools/custom/runtime-smoke/tool.toml"),
+        r#"
+[tool]
+id = "runtime-smoke"
+description = "Runtime smoke imported tool"
+command = "python3"
+mutability = "worktree"
+compatible_gate_kinds = ["ci", "flagship"]
+evidence_kinds = ["runtime_witness", "structured_report"]
+"#,
+    );
+
+    let cfg = load_repo_config(dir.path()).expect("load repo config");
+    let tool = cfg.tools.get("runtime-smoke").expect("tool exists");
+    assert_eq!(format!("{:?}", tool.mutability), "Worktree");
+    assert_eq!(tool.compatible_gate_kinds.len(), 2);
+    assert_eq!(
+        tool.evidence_kinds,
+        vec!["runtime_witness".to_string(), "structured_report".to_string()]
+    );
+}

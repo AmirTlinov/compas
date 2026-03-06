@@ -40,6 +40,29 @@ pub struct ProjectTool {
     pub receipt_contract: Option<ToolReceiptContract>,
     #[serde(default)]
     pub env: BTreeMap<String, String>,
+    #[serde(default)]
+    pub mutability: ToolMutability,
+    #[serde(default)]
+    pub compatible_gate_kinds: Vec<ToolCompatibleGateKind>,
+    #[serde(default)]
+    pub evidence_kinds: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolMutability {
+    #[default]
+    ReadOnly,
+    Worktree,
+    Write,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCompatibleGateKind {
+    CiFast,
+    Ci,
+    Flagship,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]

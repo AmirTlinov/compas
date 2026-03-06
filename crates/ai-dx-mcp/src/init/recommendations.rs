@@ -5,7 +5,7 @@ use crate::{
         RegistryManifestV1, RegistryPackRecommendationV1, RegistryPackV1, RegistryPluginV1,
     },
 };
-use std::{cmp::Reverse, path::Path};
+use std::{cmp::Reverse, collections::BTreeSet, fs, path::Path};
 
 fn api_err(code: &str, message: impl Into<String>) -> ApiError {
     ApiError {
@@ -14,9 +14,70 @@ fn api_err(code: &str, message: impl Into<String>) -> ApiError {
     }
 }
 
-fn matches_recommendation(rec: &RegistryPackRecommendationV1, languages: &[String]) -> bool {
+const AI_FIRST_REQUIRED_FILES: &[&str] = &[
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "docs/index.md",
+    "docs/exec-plans/README.md",
+    "docs/exec-plans/TEMPLATE.md",
+    "docs/QUALITY_SCORE.md",
+];
+const AI_FIRST_AGENTS_MARKER: &str = "<!-- compas:ai_first_router -->";
+const QUALITY_SCORE_START_MARKER: &str = "<!-- compas:quality_score:start -->";
+const QUALITY_SCORE_END_MARKER: &str = "<!-- compas:quality_score:end -->";
+
+fn detect_repo_signals(repo_root: &Path) -> Vec<String> {
+    let mut signals: BTreeSet<String> = BTreeSet::new();
+    if has_ai_first_scaffold_signal(repo_root) {
+        signals.insert("ai_first_scaffold".to_string());
+    }
+    for (signal, rel) in [
+        (
+            "worktree_isolation_declared",
+            ".agents/mcp/compas/runtime/worktree_isolation.toml",
+        ),
+        (
+            "app_harness_declared",
+            ".agents/mcp/compas/runtime/app_harness.toml",
+        ),
+        (
+            "observability_declared",
+            ".agents/mcp/compas/runtime/observability.toml",
+        ),
+        (
+            "ui_validation_declared",
+            ".agents/mcp/compas/runtime/ui_validation.toml",
+        ),
+    ] {
+        if repo_root.join(rel).is_file() {
+            signals.insert(signal.to_string());
+        }
+    }
+    signals.into_iter().collect()
+}
+
+fn has_ai_first_scaffold_signal(repo_root: &Path) -> bool {
+    if !AI_FIRST_REQUIRED_FILES
+        .iter()
+        .all(|rel| repo_root.join(rel).is_file())
+    {
+        return false;
+    }
+    let agents = fs::read_to_string(repo_root.join("AGENTS.md")).ok();
+    let quality = fs::read_to_string(repo_root.join("docs/QUALITY_SCORE.md")).ok();
+    matches!(agents.as_deref(), Some(text) if text.contains(AI_FIRST_AGENTS_MARKER))
+        && matches!(quality.as_deref(), Some(text) if text.contains(QUALITY_SCORE_START_MARKER) && text.contains(QUALITY_SCORE_END_MARKER))
+}
+
+fn matches_recommendation(
+    rec: &RegistryPackRecommendationV1,
+    languages: &[String],
+    repo_signals: &[String],
+) -> bool {
     if rec.when_no_languages {
-        return languages.is_empty();
+        if !languages.is_empty() {
+            return false;
+        }
     }
     if !rec.languages_any.is_empty()
         && !languages.iter().any(|language| {
@@ -32,6 +93,21 @@ fn matches_recommendation(rec: &RegistryPackRecommendationV1, languages: &[Strin
             .languages_all
             .iter()
             .all(|required| languages.iter().any(|language| language == required))
+        {
+        return false;
+    }
+    if !rec.signals_any.is_empty()
+        && !repo_signals
+            .iter()
+            .any(|signal| rec.signals_any.iter().any(|candidate| candidate == signal))
+    {
+        return false;
+    }
+    if !rec.signals_all.is_empty()
+        && !rec
+            .signals_all
+            .iter()
+            .all(|required| repo_signals.iter().any(|signal| signal == required))
     {
         return false;
     }
@@ -41,11 +117,12 @@ fn matches_recommendation(rec: &RegistryPackRecommendationV1, languages: &[Strin
 pub(crate) fn recommendations_for_manifest_languages(
     manifest: &RegistryManifestV1,
     languages: &[String],
+    repo_signals: &[String],
 ) -> Vec<InitRegistryPackRecommendation> {
     let mut candidates: Vec<(u32, String, InitRegistryPackRecommendation)> = manifest
         .packs
         .iter()
-        .filter_map(|pack| pack_recommendation(manifest, pack, languages))
+        .filter_map(|pack| pack_recommendation(manifest, pack, languages, repo_signals))
         .collect();
     candidates.sort_by_key(|(priority, pack_id, _)| (Reverse(*priority), pack_id.clone()));
     candidates
@@ -58,12 +135,28 @@ fn pack_recommendation(
     manifest: &RegistryManifestV1,
     pack: &RegistryPackV1,
     languages: &[String],
+    repo_signals: &[String],
 ) -> Option<(u32, String, InitRegistryPackRecommendation)> {
     let recommendation = pack.recommendation.as_ref()?;
-    if !matches_recommendation(recommendation, languages) {
+    if !matches_recommendation(recommendation, languages, repo_signals) {
         return None;
     }
     let (requires, runtime_kind, cost_class) = effective_pack_metadata(manifest, pack);
+    let mut matched_signals = recommendation
+        .signals_all
+        .iter()
+        .filter(|signal| repo_signals.iter().any(|present| present == *signal))
+        .cloned()
+        .collect::<Vec<_>>();
+    matched_signals.extend(
+        recommendation
+            .signals_any
+            .iter()
+            .filter(|signal| repo_signals.iter().any(|present| present == *signal))
+            .cloned(),
+    );
+    matched_signals.sort();
+    matched_signals.dedup();
     Some((
         recommendation.priority,
         pack.id.clone(),
@@ -73,6 +166,7 @@ fn pack_recommendation(
             cost_class,
             runtime_kind,
             requires,
+            matched_signals,
         },
     ))
 }
@@ -177,11 +271,16 @@ pub(crate) async fn registry_pack_recommendations(
             )
         })?;
     let languages = detected_repo_languages(repo_root, req)?;
-    let recommended = recommendations_for_manifest_languages(&resolved.manifest, &languages);
-    if recommended.is_empty() {
+    let repo_signals = detect_repo_signals(repo_root);
+    let recommended =
+        recommendations_for_manifest_languages(&resolved.manifest, &languages, &repo_signals);
+    if recommended.is_empty() && repo_signals.is_empty() {
         return Ok(None);
     }
-    Ok(Some(InitRecommendations { recommended }))
+    Ok(Some(InitRecommendations {
+        repo_signals,
+        recommended,
+    }))
 }
 
 #[cfg(test)]
