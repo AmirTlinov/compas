@@ -22,6 +22,9 @@ Native plugin manager quickstart:
 Details (trust model, lockfile, drift recovery): see `docs/PLUGINS.md`.
 Project status (what’s production-ready today): `docs/STATUS.md`.
 
+Canonical merge-readiness stays outside `gate`: once worker witness and reviewer/audit artifacts exist,
+run `compas.exec merge-truth-check -- --profile <ci|flagship>` from the registry-side proof plugin.
+
 ## ALPHA-IRON RULE
 - Никаких устаревших хвостов и режимов совместимости в коде и рабочих доках.
 - Breaking changes разрешены по умолчанию (этап глубокой альфы, пользователей нет).
@@ -174,6 +177,10 @@ cargo run -p ai-dx-mcp -- init --apply --profile ai_first --repo-root /path/to/r
 - В receipts для каждого tool есть контрольные поля:
   - `stdout_bytes`, `stderr_bytes`,
   - `stdout_sha256`, `stderr_sha256`.
+- Merge-readiness intentionally remains a separate exec-only proof step:
+  - worker emits witness via `gate --write-witness`,
+  - reviewer/audit emit canonical review artifacts under `.agents/mcp/compas/reviews/`,
+  - merge truth is then assembled via `compas.exec merge-truth-check -- --profile <ci|flagship>`.
 - Ротация witness enforced:
   - максимум 20 файлов,
   - максимум 2 MiB суммарно,
