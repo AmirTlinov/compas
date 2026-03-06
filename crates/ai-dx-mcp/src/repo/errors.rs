@@ -70,9 +70,7 @@ pub enum RepoConfigError {
         tool_id: String,
         value: String,
     },
-    #[error(
-        "invalid compatible gate kinds: {tool_id} (plugin {plugin_id}) -> {value}"
-    )]
+    #[error("invalid compatible gate kinds: {tool_id} (plugin {plugin_id}) -> {value}")]
     InvalidCompatibleGateKinds {
         plugin_id: String,
         tool_id: String,
@@ -113,9 +111,7 @@ pub enum RepoConfigError {
         gate_kind: String,
         tool_id: String,
     },
-    #[error(
-        "tool {tool_id} (plugin {plugin_id}) is not compatible with gate {gate_kind}"
-    )]
+    #[error("tool {tool_id} (plugin {plugin_id}) is not compatible with gate {gate_kind}")]
     GateIncompatibleTool {
         plugin_id: String,
         gate_kind: String,

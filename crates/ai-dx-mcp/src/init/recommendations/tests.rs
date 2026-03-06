@@ -229,14 +229,18 @@ fn recommendations_match_repo_signals_and_report_which_matched() {
         &[String::from("ai_first_scaffold")],
     );
     assert_eq!(recommendations.len(), 1);
-    assert_eq!(recommendations[0].matched_signals, vec!["ai_first_scaffold"]);
+    assert_eq!(recommendations[0].matched_signals, ["ai_first_scaffold"]);
 }
 
 #[test]
 fn detect_repo_signals_recognizes_ai_first_scaffold_and_runtime_markers() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join("docs/exec-plans")).unwrap();
-    std::fs::create_dir_all(dir.path().join(".agents/mcp/compas/runtime")).unwrap();
+    let plans_dir = dir.path().join("docs/exec-plans");
+    std::fs::create_dir_all(&plans_dir).unwrap();
+    let runtime_cfg = dir
+        .path()
+        .join(".agents/mcp/compas/runtime/worktree_isolation.toml");
+    std::fs::create_dir_all(runtime_cfg.parent().unwrap()).unwrap();
     std::fs::write(
         dir.path().join("AGENTS.md"),
         "# AGENTS\n\n<!-- compas:ai_first_router -->\n",
@@ -244,26 +248,14 @@ fn detect_repo_signals_recognizes_ai_first_scaffold_and_runtime_markers() {
     .unwrap();
     std::fs::write(dir.path().join("ARCHITECTURE.md"), "# ARCHITECTURE\n").unwrap();
     std::fs::write(dir.path().join("docs/index.md"), "# Docs index\n").unwrap();
-    std::fs::write(
-        dir.path().join("docs/exec-plans/README.md"),
-        "# Execution plans\n",
-    )
-    .unwrap();
-    std::fs::write(
-        dir.path().join("docs/exec-plans/TEMPLATE.md"),
-        "# Template\n",
-    )
-    .unwrap();
+    std::fs::write(plans_dir.join("README.md"), "# Execution plans\n").unwrap();
+    std::fs::write(plans_dir.join("TEMPLATE.md"), "# Template\n").unwrap();
     std::fs::write(
         dir.path().join("docs/QUALITY_SCORE.md"),
         "<!-- compas:quality_score:start -->\n...\n<!-- compas:quality_score:end -->\n",
     )
     .unwrap();
-    std::fs::write(
-        dir.path().join(".agents/mcp/compas/runtime/worktree_isolation.toml"),
-        "schema = 'compas.worktree_isolation.v1'\n",
-    )
-    .unwrap();
+    std::fs::write(runtime_cfg, "schema = 'compas.worktree_isolation.v1'\n").unwrap();
 
     let signals = detect_repo_signals(dir.path());
     assert_eq!(

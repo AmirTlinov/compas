@@ -142,8 +142,9 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
         })
         .await
         .expect("call compas.catalog tool");
-    let tool_details: serde_json::Value =
-        tool_details.into_typed().expect("typed compas.catalog tool");
+    let tool_details: serde_json::Value = tool_details
+        .into_typed()
+        .expect("typed compas.catalog tool");
     assert_eq!(
         tool_details
             .get("tool")

@@ -258,7 +258,7 @@ pub(crate) fn ensure_known_gate_tools(
                     });
                 }
             };
-            if !tool.compatible_gate_kinds.iter().any(|value| value == &expected) {
+            if !tool.compatible_gate_kinds.contains(&expected) {
                 return Err(RepoConfigError::GateIncompatibleTool {
                     plugin_id: plugin_id.to_string(),
                     gate_kind: gate_kind.to_string(),

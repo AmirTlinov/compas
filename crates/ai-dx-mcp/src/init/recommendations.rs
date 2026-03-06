@@ -93,7 +93,7 @@ fn matches_recommendation(
             .languages_all
             .iter()
             .all(|required| languages.iter().any(|language| language == required))
-        {
+    {
         return false;
     }
     if !rec.signals_any.is_empty()

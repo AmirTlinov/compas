@@ -410,6 +410,9 @@ evidence_kinds = ["runtime_witness", "structured_report"]
     assert_eq!(tool.compatible_gate_kinds.len(), 2);
     assert_eq!(
         tool.evidence_kinds,
-        vec!["runtime_witness".to_string(), "structured_report".to_string()]
+        vec![
+            "runtime_witness".to_string(),
+            "structured_report".to_string()
+        ]
     );
 }
