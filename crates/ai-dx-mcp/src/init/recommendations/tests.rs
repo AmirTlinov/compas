@@ -1,4 +1,4 @@
-use super::recommendations_for_manifest_languages;
+use super::{detect_repo_signals, recommendations_for_manifest_languages};
 use crate::{
     api::InitRequest,
     init::planner::plan_init,
@@ -71,6 +71,8 @@ fn recommendations_are_priority_sorted_then_pack_id() {
                 why: "Beta matches detected code languages.".to_string(),
                 languages_any: vec!["rust".to_string()],
                 languages_all: vec![],
+                signals_any: vec![],
+                signals_all: vec![],
                 when_no_languages: false,
             }),
         },
@@ -87,6 +89,8 @@ fn recommendations_are_priority_sorted_then_pack_id() {
                 why: "Alpha matches detected code languages.".to_string(),
                 languages_any: vec!["rust".to_string()],
                 languages_all: vec![],
+                signals_any: vec![],
+                signals_all: vec![],
                 when_no_languages: false,
             }),
         },
@@ -103,13 +107,15 @@ fn recommendations_are_priority_sorted_then_pack_id() {
                 why: "Zeta matches detected code languages.".to_string(),
                 languages_any: vec!["rust".to_string()],
                 languages_all: vec![],
+                signals_any: vec![],
+                signals_all: vec![],
                 when_no_languages: false,
             }),
         },
     ]);
 
     let recommendations =
-        recommendations_for_manifest_languages(&manifest, &[String::from("rust")]);
+        recommendations_for_manifest_languages(&manifest, &[String::from("rust")], &[]);
     assert_eq!(
         recommendations
             .iter()
@@ -134,13 +140,16 @@ fn recommendations_use_no_language_fallback_only_for_empty_language_set() {
             why: "Safe default bundle when no supported language is detected.".to_string(),
             languages_any: vec![],
             languages_all: vec![],
+            signals_any: vec![],
+            signals_all: vec![],
             when_no_languages: true,
         }),
     }]);
 
-    let no_languages = recommendations_for_manifest_languages(&manifest, &[]);
+    let no_languages = recommendations_for_manifest_languages(&manifest, &[], &[]);
     assert_eq!(no_languages.len(), 1);
-    let rust_languages = recommendations_for_manifest_languages(&manifest, &[String::from("rust")]);
+    let rust_languages =
+        recommendations_for_manifest_languages(&manifest, &[String::from("rust")], &[]);
     assert!(rust_languages.is_empty());
 }
 
@@ -178,17 +187,84 @@ fn recommendations_derive_pack_metadata_when_aggregate_fields_are_absent() {
                 why: "Quality rails fit detected code languages.".to_string(),
                 languages_any: vec!["rust".to_string()],
                 languages_all: vec![],
+                signals_any: vec![],
+                signals_all: vec![],
                 when_no_languages: false,
             }),
         }],
     };
 
     let recommendations =
-        recommendations_for_manifest_languages(&manifest, &[String::from("rust")]);
+        recommendations_for_manifest_languages(&manifest, &[String::from("rust")], &[]);
     assert_eq!(recommendations.len(), 1);
     assert_eq!(recommendations[0].requires, vec!["bootable"]);
     assert_eq!(recommendations[0].runtime_kind, "hybrid");
     assert_eq!(recommendations[0].cost_class, "high");
+}
+
+#[test]
+fn recommendations_match_repo_signals_and_report_which_matched() {
+    let manifest = manifest(vec![RegistryPackV1 {
+        id: "ai-proof-core".to_string(),
+        description: "proof core description".to_string(),
+        plugins: vec!["p1".to_string()],
+        capabilities: vec!["guard".to_string(), "lint".to_string()],
+        requires: vec![],
+        runtime_kind: "tool-backed".to_string(),
+        cost_class: "medium".to_string(),
+        recommendation: Some(RegistryPackRecommendationV1 {
+            priority: 100,
+            why: "Proof kernel rails fit AI-first repos.".to_string(),
+            languages_any: vec![],
+            languages_all: vec![],
+            signals_any: vec!["ai_first_scaffold".to_string()],
+            signals_all: vec![],
+            when_no_languages: false,
+        }),
+    }]);
+
+    let recommendations = recommendations_for_manifest_languages(
+        &manifest,
+        &[String::from("rust")],
+        &[String::from("ai_first_scaffold")],
+    );
+    assert_eq!(recommendations.len(), 1);
+    assert_eq!(recommendations[0].matched_signals, ["ai_first_scaffold"]);
+}
+
+#[test]
+fn detect_repo_signals_recognizes_ai_first_scaffold_and_runtime_markers() {
+    let dir = tempfile::tempdir().unwrap();
+    let plans_dir = dir.path().join("docs/exec-plans");
+    std::fs::create_dir_all(&plans_dir).unwrap();
+    let runtime_cfg = dir
+        .path()
+        .join(".agents/mcp/compas/runtime/worktree_isolation.toml");
+    std::fs::create_dir_all(runtime_cfg.parent().unwrap()).unwrap();
+    std::fs::write(
+        dir.path().join("AGENTS.md"),
+        "# AGENTS\n\n<!-- compas:ai_first_router -->\n",
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("ARCHITECTURE.md"), "# ARCHITECTURE\n").unwrap();
+    std::fs::write(dir.path().join("docs/index.md"), "# Docs index\n").unwrap();
+    std::fs::write(plans_dir.join("README.md"), "# Execution plans\n").unwrap();
+    std::fs::write(plans_dir.join("TEMPLATE.md"), "# Template\n").unwrap();
+    std::fs::write(
+        dir.path().join("docs/QUALITY_SCORE.md"),
+        "<!-- compas:quality_score:start -->\n...\n<!-- compas:quality_score:end -->\n",
+    )
+    .unwrap();
+    std::fs::write(runtime_cfg, "schema = 'compas.worktree_isolation.v1'\n").unwrap();
+
+    let signals = detect_repo_signals(dir.path());
+    assert_eq!(
+        signals,
+        vec![
+            "ai_first_scaffold".to_string(),
+            "worktree_isolation_declared".to_string()
+        ]
+    );
 }
 
 #[test]
@@ -243,6 +319,8 @@ fn manifest_validation_fails_closed_on_malformed_pack_recommendation() {
             why: "Broken recommendation is missing selectors.".to_string(),
             languages_any: vec![],
             languages_all: vec![],
+            signals_any: vec![],
+            signals_all: vec![],
             when_no_languages: false,
         }),
     }]);
@@ -268,4 +346,28 @@ fn manifest_validation_allows_prior_pack_shape_without_aggregate_metadata() {
     }]);
 
     validate_manifest_v1(&manifest).expect("older manifest shape should stay compatible");
+}
+
+#[test]
+fn manifest_validation_allows_signal_selectors() {
+    let manifest = manifest(vec![RegistryPackV1 {
+        id: "proof".to_string(),
+        description: "proof description".to_string(),
+        plugins: vec!["p1".to_string()],
+        capabilities: vec!["guard".to_string(), "lint".to_string()],
+        requires: vec![],
+        runtime_kind: "tool-backed".to_string(),
+        cost_class: "medium".to_string(),
+        recommendation: Some(RegistryPackRecommendationV1 {
+            priority: 50,
+            why: "Signal selectors are valid for AI-first repos.".to_string(),
+            languages_any: vec![],
+            languages_all: vec![],
+            signals_any: vec!["ai_first_scaffold".to_string()],
+            signals_all: vec![],
+            when_no_languages: false,
+        }),
+    }]);
+
+    validate_manifest_v1(&manifest).expect("signal selectors should validate");
 }

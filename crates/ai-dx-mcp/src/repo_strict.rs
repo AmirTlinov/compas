@@ -1,4 +1,7 @@
-use crate::config::{ProjectTool, ToolExecutionPolicyConfigV2, ToolExecutionPolicyMode};
+use crate::config::{
+    ProjectTool, ToolCompatibleGateKind, ToolExecutionPolicyConfigV2, ToolExecutionPolicyMode,
+    ToolMutability,
+};
 use crate::repo::RepoConfigError;
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
@@ -78,6 +81,82 @@ pub(crate) fn validate_tool(plugin_id: &str, tool: &ProjectTool) -> Result<(), R
             tool_id: tool.id.clone(),
         });
     }
+    validate_compatible_gate_kinds(plugin_id, tool)?;
+    validate_evidence_kinds(plugin_id, tool)?;
+    Ok(())
+}
+
+fn validate_compatible_gate_kinds(
+    plugin_id: &str,
+    tool: &ProjectTool,
+) -> Result<(), RepoConfigError> {
+    if tool.compatible_gate_kinds.is_empty() {
+        return Ok(());
+    }
+    let label = |value: &ToolCompatibleGateKind| match value {
+        ToolCompatibleGateKind::CiFast => "ci_fast",
+        ToolCompatibleGateKind::Ci => "ci",
+        ToolCompatibleGateKind::Flagship => "flagship",
+    };
+    let mut seen = BTreeSet::new();
+    let mut sorted = tool
+        .compatible_gate_kinds
+        .iter()
+        .map(label)
+        .collect::<Vec<_>>();
+    let current = tool
+        .compatible_gate_kinds
+        .iter()
+        .map(label)
+        .collect::<Vec<_>>();
+    sorted.sort();
+    if sorted != current {
+        return Err(RepoConfigError::InvalidCompatibleGateKinds {
+            plugin_id: plugin_id.to_string(),
+            tool_id: tool.id.clone(),
+            value: "values must be sorted and duplicate-free".to_string(),
+        });
+    }
+    for value in &tool.compatible_gate_kinds {
+        if !seen.insert(*value) {
+            return Err(RepoConfigError::InvalidCompatibleGateKinds {
+                plugin_id: plugin_id.to_string(),
+                tool_id: tool.id.clone(),
+                value: "values must be sorted and duplicate-free".to_string(),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn validate_evidence_kinds(plugin_id: &str, tool: &ProjectTool) -> Result<(), RepoConfigError> {
+    let token_re = id_regex();
+    let mut sorted = tool.evidence_kinds.clone();
+    sorted.sort();
+    if sorted != tool.evidence_kinds {
+        return Err(RepoConfigError::InvalidEvidenceKind {
+            plugin_id: plugin_id.to_string(),
+            tool_id: tool.id.clone(),
+            value: "values must be sorted lexicographically".to_string(),
+        });
+    }
+    let mut seen = BTreeSet::new();
+    for value in &tool.evidence_kinds {
+        if !token_re.is_match(value) {
+            return Err(RepoConfigError::InvalidEvidenceKind {
+                plugin_id: plugin_id.to_string(),
+                tool_id: tool.id.clone(),
+                value: value.clone(),
+            });
+        }
+        if !seen.insert(value.clone()) {
+            return Err(RepoConfigError::InvalidEvidenceKind {
+                plugin_id: plugin_id.to_string(),
+                tool_id: tool.id.clone(),
+                value: value.clone(),
+            });
+        }
+    }
     Ok(())
 }
 
@@ -152,12 +231,40 @@ pub(crate) fn ensure_known_gate_tools(
     tools: &BTreeMap<String, ProjectTool>,
 ) -> Result<(), RepoConfigError> {
     for tool_id in tool_ids {
-        if !tools.contains_key(tool_id) {
+        let Some(tool) = tools.get(tool_id) else {
             return Err(RepoConfigError::UnknownGateTool {
                 plugin_id: plugin_id.to_string(),
                 gate_kind: gate_kind.to_string(),
                 tool_id: tool_id.clone(),
             });
+        };
+        if matches!(tool.mutability, ToolMutability::Write) {
+            return Err(RepoConfigError::GateMutatingTool {
+                plugin_id: plugin_id.to_string(),
+                gate_kind: gate_kind.to_string(),
+                tool_id: tool_id.clone(),
+            });
+        }
+        if !tool.compatible_gate_kinds.is_empty() {
+            let expected = match gate_kind {
+                "ci_fast" => ToolCompatibleGateKind::CiFast,
+                "ci" => ToolCompatibleGateKind::Ci,
+                "flagship" => ToolCompatibleGateKind::Flagship,
+                _ => {
+                    return Err(RepoConfigError::InvalidCompatibleGateKinds {
+                        plugin_id: plugin_id.to_string(),
+                        tool_id: tool_id.clone(),
+                        value: format!("unknown gate kind: {gate_kind}"),
+                    });
+                }
+            };
+            if !tool.compatible_gate_kinds.contains(&expected) {
+                return Err(RepoConfigError::GateIncompatibleTool {
+                    plugin_id: plugin_id.to_string(),
+                    gate_kind: gate_kind.to_string(),
+                    tool_id: tool_id.clone(),
+                });
+            }
         }
     }
     Ok(())

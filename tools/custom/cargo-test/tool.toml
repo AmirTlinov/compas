@@ -6,6 +6,9 @@ args = ["test"]
 timeout_ms = 600000
 max_stdout_bytes = 20000
 max_stderr_bytes = 20000
+mutability = "read_only"
+compatible_gate_kinds = ["ci", "ci_fast", "flagship"]
+evidence_kinds = ["receipt"]
 
 [tool.receipt_contract]
 min_duration_ms = 100

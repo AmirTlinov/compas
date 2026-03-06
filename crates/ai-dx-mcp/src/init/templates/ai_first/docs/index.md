@@ -6,6 +6,7 @@ Use this directory as the canonical navigation hub.
 - `../ARCHITECTURE.md`
 - `QUALITY_SCORE.md`
 - `exec-plans/README.md`
+- `exec-plans/TEMPLATE.md`
 
 ## Recommended additions
 - `adr/` for lasting architectural decisions

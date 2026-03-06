@@ -38,6 +38,8 @@ pub struct InitPlan {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 pub struct InitRecommendations {
     #[serde(default)]
+    pub repo_signals: Vec<String>,
+    #[serde(default)]
     pub recommended: Vec<InitRegistryPackRecommendation>,
 }
 
@@ -49,6 +51,8 @@ pub struct InitRegistryPackRecommendation {
     pub runtime_kind: String,
     #[serde(default)]
     pub requires: Vec<String>,
+    #[serde(default)]
+    pub matched_signals: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

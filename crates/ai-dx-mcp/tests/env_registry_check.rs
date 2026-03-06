@@ -29,6 +29,9 @@ fn tool_with_env(id: &str, env_name: &str, env_value: &str) -> ProjectTool {
         report: None,
         receipt_contract: None,
         env,
+        mutability: Default::default(),
+        compatible_gate_kinds: vec![],
+        evidence_kinds: vec![],
     }
 }
 

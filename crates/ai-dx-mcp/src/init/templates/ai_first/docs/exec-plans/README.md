@@ -1,6 +1,6 @@
 # Execution plans
 
-Store bounded plans here.
+Store bounded execution plans here. Use `TEMPLATE.md` as the canonical starting point.
 
 Each plan should capture:
 - goal

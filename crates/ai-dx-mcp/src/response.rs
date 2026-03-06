@@ -208,13 +208,18 @@ fn init_summary(out: &InitOutput) -> String {
         .as_ref()
         .map(|value| value.recommended.len())
         .unwrap_or(0);
+    let repo_signals = out
+        .recommendations
+        .as_ref()
+        .map(|value| value.repo_signals.len())
+        .unwrap_or(0);
     let warnings = out.warnings.len();
     let why = if let Some(err) = &out.error {
         format!("{}.", err.code)
     } else {
         format!(
-            "writes={}, deletes={}, recommendations={}, warnings={}.",
-            writes, deletes, recommendations, warnings
+            "writes={}, deletes={}, recommendations={}, repo_signals={}, warnings={}.",
+            writes, deletes, recommendations, repo_signals, warnings
         )
     };
     let next = if out.ok && out.applied {

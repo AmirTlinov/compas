@@ -127,6 +127,42 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
             .and_then(|v| v.as_str()),
         Some("default")
     );
+    let tool_details = client
+        .call_tool(CallToolRequestParams {
+            meta: None,
+            name: "compas.catalog".into(),
+            arguments: serde_json::json!({
+                "repo_root": repo_root_str,
+                "view": "tool",
+                "tool_id": "cargo-test"
+            })
+            .as_object()
+            .cloned(),
+            task: None,
+        })
+        .await
+        .expect("call compas.catalog tool");
+    let tool_details: serde_json::Value = tool_details
+        .into_typed()
+        .expect("typed compas.catalog tool");
+    assert_eq!(
+        tool_details
+            .get("tool")
+            .and_then(|p| p.get("mutability"))
+            .and_then(|v| v.as_str()),
+        Some("read_only")
+    );
+    let compatible_gate_kinds = tool_details
+        .get("tool")
+        .and_then(|p| p.get("compatible_gate_kinds"))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .expect("compatible gate kinds must be present");
+    let compatible_gate_kinds: Vec<&str> = compatible_gate_kinds
+        .iter()
+        .map(|value| value.as_str().expect("gate kind string"))
+        .collect();
+    assert_eq!(compatible_gate_kinds, vec!["ci", "ci_fast", "flagship"]);
 
     let validate = client
         .call_tool(CallToolRequestParams {
@@ -248,6 +284,7 @@ async fn mcp_smoke_list_tools_and_validate_warn() {
     assert!(dir.path().join("AGENTS.md").is_file());
     assert!(dir.path().join("ARCHITECTURE.md").is_file());
     assert!(dir.path().join("docs/index.md").is_file());
+    assert!(dir.path().join("docs/exec-plans/TEMPLATE.md").is_file());
 
     client.close().await.ok();
     server.close().await.ok();

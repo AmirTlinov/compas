@@ -1,5 +1,5 @@
 use crate::api::{PluginInfo, PluginSpec, ProjectToolSpec};
-use crate::config::ProjectTool;
+use crate::config::{ProjectTool, ToolCompatibleGateKind, ToolMutability};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
@@ -16,6 +16,11 @@ pub(crate) fn to_public_tool_spec_with_owner(
     tool: &ProjectTool,
     plugin_id: &str,
 ) -> ProjectToolSpec {
+    let mutability = match tool.mutability {
+        ToolMutability::ReadOnly => "read_only",
+        ToolMutability::Worktree => "worktree",
+        ToolMutability::Write => "write",
+    };
     ProjectToolSpec {
         id: tool.id.clone(),
         plugin_id: plugin_id.to_string(),
@@ -26,6 +31,17 @@ pub(crate) fn to_public_tool_spec_with_owner(
         timeout_ms: tool.timeout_ms.unwrap_or(600_000),
         max_stdout_bytes: tool.max_stdout_bytes.unwrap_or(20_000),
         max_stderr_bytes: tool.max_stderr_bytes.unwrap_or(20_000),
+        mutability: mutability.to_string(),
+        compatible_gate_kinds: tool
+            .compatible_gate_kinds
+            .iter()
+            .map(|kind| match kind {
+                ToolCompatibleGateKind::CiFast => "ci_fast".to_string(),
+                ToolCompatibleGateKind::Ci => "ci".to_string(),
+                ToolCompatibleGateKind::Flagship => "flagship".to_string(),
+            })
+            .collect(),
+        evidence_kinds: tool.evidence_kinds.clone(),
     }
 }
 

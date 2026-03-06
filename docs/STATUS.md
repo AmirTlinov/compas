@@ -16,6 +16,10 @@ Compas is a **fail‑closed quality engine** for AI agents:
 
 Core design rule:
 - **compas core does not contain community plugins**. It only provides runtime + validation + installation plumbing.
+- Core also keeps the proof contract lean:
+  - no extra MCP methods beyond `validate/gate/init/catalog/exec`
+  - no feature-specific runtime/UI brains in core
+  - additive witness/evidence metadata only
 
 ## Community plugins (external SSOT)
 
@@ -76,3 +80,8 @@ If you run AI‑only development:
 - Keep `ci_fast` deterministic and cheap.
 - Use `gate` for “proof of work” (receipts + witness).
 - Treat plugin installs as **policy changes**; pin registry versions for CI/reproducibility.
+- `init --profile ai_first` is the opt-in canonical repo-visible scaffold path:
+  `AGENTS.md`, `ARCHITECTURE.md`, `docs/index.md`, `docs/exec-plans/{README,TEMPLATE}.md`,
+  and `docs/QUALITY_SCORE.md` with managed markers for later proof plugins.
+- Registry recommendations can now match explicit repo signals (for example `ai_first_scaffold`)
+  in addition to detected code languages; recommendation flow stays advisory-only.

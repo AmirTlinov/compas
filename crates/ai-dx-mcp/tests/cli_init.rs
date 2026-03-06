@@ -167,6 +167,7 @@ fn cli_init_ai_first_profile_scaffolds_repo_visible_docs() {
         "ARCHITECTURE.md",
         "docs/index.md",
         "docs/exec-plans/README.md",
+        "docs/exec-plans/TEMPLATE.md",
         "docs/QUALITY_SCORE.md",
     ] {
         assert!(dir.path().join(rel).is_file(), "{rel} not created");

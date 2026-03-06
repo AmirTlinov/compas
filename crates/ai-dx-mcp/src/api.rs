@@ -335,6 +335,11 @@ pub struct ProjectToolSpec {
     pub timeout_ms: u64,
     pub max_stdout_bytes: usize,
     pub max_stderr_bytes: usize,
+    pub mutability: String,
+    #[serde(default)]
+    pub compatible_gate_kinds: Vec<String>,
+    #[serde(default)]
+    pub evidence_kinds: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

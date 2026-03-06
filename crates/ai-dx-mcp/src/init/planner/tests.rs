@@ -355,6 +355,9 @@ fn resolve_gate_tools_maps_canonical_ids_and_honors_gate_kinds() {
         report: None,
         receipt_contract: None,
         env: BTreeMap::new(),
+        mutability: Default::default(),
+        compatible_gate_kinds: vec![],
+        evidence_kinds: vec![],
     };
 
     let pack = PackManifestV1 {
