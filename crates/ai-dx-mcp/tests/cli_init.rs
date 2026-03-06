@@ -234,6 +234,44 @@ fn cli_init_rejects_unknown_profile() {
 }
 
 #[test]
+fn cli_init_registry_failure_stays_advisory_only() {
+    let dir = tempfile::tempdir().expect("temp repo");
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("write Cargo.toml");
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--repo-root"])
+        .arg(dir.path())
+        .args([
+            "--registry",
+            "/definitely/missing/registry.manifest.v1.json",
+        ])
+        .output()
+        .expect("run init with missing advisory registry");
+    assert!(
+        out.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let parsed: InitOutput = serde_json::from_slice(&out.stdout).expect("parse InitOutput");
+    assert!(parsed.ok, "ok=false; error={:?}", parsed.error);
+    assert!(parsed.plan.is_some(), "plan missing");
+    assert!(
+        parsed.recommendations.is_none(),
+        "failed advisory registry load should not invent recommendations"
+    );
+    assert_eq!(parsed.warnings.len(), 1, "expected one advisory warning");
+    assert_eq!(
+        parsed.warnings[0].code,
+        "init.registry_manifest_load_failed"
+    );
+}
+
+#[test]
 fn cli_validate_write_baseline_ratchet_requires_and_accepts_maintenance() {
     let dir = tempfile::tempdir().expect("temp repo");
     std::fs::write(

@@ -50,9 +50,14 @@ fn build_manifest_registry_fixture(root: &Path) -> PathBuf {
                 "path": "plugins/spec-adr-gate",
                 "status": "community",
                 "description": "Fixture plugin for manifest integration tests",
+                "capabilities": ["adr", "gate"],
+                "requires": [],
+                "runtime_kind": "tool-backed",
+                "cost_class": "medium",
+                "artifacts_produced": [],
                 "package": {
                     "version": "0.1.0",
-                    "type": "script",
+                    "type": "tool-backed",
                     "maturity": "stable",
                     "runtime": "python3",
                     "portable": true,
@@ -66,7 +71,11 @@ fn build_manifest_registry_fixture(root: &Path) -> PathBuf {
             {
                 "id": "core",
                 "description": "Core fixture pack",
-                "plugins": ["spec-adr-gate"]
+                "plugins": ["spec-adr-gate"],
+                "capabilities": ["adr", "gate"],
+                "requires": [],
+                "runtime_kind": "tool-backed",
+                "cost_class": "medium"
             }
         ]
     });

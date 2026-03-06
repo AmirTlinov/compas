@@ -1,8 +1,6 @@
 use super::super::{PluginsAction, PluginsCli};
-use base64::{Engine as _, engine::general_purpose};
+use crate::cli::registry_manifest::{ManifestResolved, RegistryManifestV1, RegistryPluginV1};
 use fs4::fs_std::FileExt;
-use p256::ecdsa::{Signature as P256Signature, VerifyingKey, signature::Verifier};
-use p256::pkcs8::DecodePublicKey;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -22,67 +20,6 @@ const FLAG_ALLOW_SUNSET: &str = "--allow-sunset";
 const FLAG_ALLOW_SUNSET_COMPAT: &str = concat!("--allow-", "deprecat", "ed");
 const TIER_EXPERIMENTAL: &str = "experimental";
 const TIER_SUNSET: &str = "sunset";
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct RegistryManifestV1 {
-    schema: String,
-    registry_version: String,
-    archive: RegistryArchiveV1,
-    plugins: Vec<RegistryPluginV1>,
-    packs: Vec<RegistryPackV1>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct RegistryArchiveV1 {
-    name: String,
-    sha256: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct RegistryPluginV1 {
-    id: String,
-    #[serde(default)]
-    aliases: Vec<String>,
-    path: String,
-    #[serde(default)]
-    status: String,
-    #[serde(default)]
-    owner: String,
-    #[serde(default)]
-    description: String,
-    package: RegistryPluginPackageV1,
-    #[serde(default)]
-    tier: Option<String>,
-    #[serde(default)]
-    maintainers: Option<Vec<String>>,
-    #[serde(default)]
-    tags: Option<Vec<String>>,
-    #[serde(default)]
-    compat: Option<serde_json::Value>,
-    #[serde(default, flatten)]
-    extra: BTreeMap<String, serde_json::Value>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct RegistryPluginPackageV1 {
-    version: String,
-    #[serde(rename = "type")]
-    kind: String,
-    maturity: String,
-    runtime: String,
-    portable: bool,
-    #[serde(default)]
-    languages: Vec<String>,
-    entrypoint: String,
-    license: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct RegistryPackV1 {
-    id: String,
-    description: String,
-    plugins: Vec<String>,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PluginsLockfileV1 {
@@ -107,10 +44,6 @@ struct PluginsLockfileEntryV1 {
     sha256: String,
     #[serde(default)]
     plugin_ids: Vec<String>,
-}
-
-fn is_http_url(raw: &str) -> bool {
-    raw.starts_with("https://") || raw.starts_with("http://")
 }
 
 fn xdg_cache_home() -> PathBuf {
@@ -140,165 +73,6 @@ fn sha256_hex(input: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(input);
     format!("{:x}", hasher.finalize())
-}
-
-fn is_sha256_hex(s: &str) -> bool {
-    s.len() == 64 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
-}
-
-fn is_compas_id(s: &str) -> bool {
-    let s = s.trim();
-    if s.len() < 2 || s.len() > 64 {
-        return false;
-    }
-    let mut chars = s.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    if !matches!(first, 'a'..='z' | '0'..='9') {
-        return false;
-    }
-    for c in chars {
-        if !matches!(c, 'a'..='z' | '0'..='9' | '_' | '-') {
-            return false;
-        }
-    }
-    true
-}
-
-fn validate_manifest_v1(manifest: &RegistryManifestV1) -> Result<(), String> {
-    if manifest.schema != "compas.registry.manifest.v1" {
-        return Err(format!(
-            "unsupported registry manifest schema: {}",
-            manifest.schema
-        ));
-    }
-    if manifest.registry_version.trim().is_empty() {
-        return Err("registry manifest has empty registry_version".to_string());
-    }
-    if manifest.archive.name.trim().is_empty()
-        || manifest.archive.name.contains('/')
-        || manifest.archive.name.contains('\\')
-    {
-        return Err(format!(
-            "invalid manifest archive.name (must be a file name): {}",
-            manifest.archive.name
-        ));
-    }
-    if !is_sha256_hex(&manifest.archive.sha256) {
-        return Err(format!(
-            "invalid manifest archive.sha256 (expected 64 lowercase hex chars): {}",
-            manifest.archive.sha256
-        ));
-    }
-    if manifest.plugins.is_empty() {
-        return Err("registry manifest has empty plugins list".to_string());
-    }
-    if manifest.packs.is_empty() {
-        return Err("registry manifest has empty packs list".to_string());
-    }
-
-    let mut ids: BTreeSet<String> = BTreeSet::new();
-    let mut aliases: BTreeSet<String> = BTreeSet::new();
-    for plugin in &manifest.plugins {
-        if !is_compas_id(&plugin.id) {
-            return Err(format!("invalid plugin id in manifest: {}", plugin.id));
-        }
-        if !ids.insert(plugin.id.clone()) {
-            return Err(format!("duplicate plugin id in manifest: {}", plugin.id));
-        }
-        for alias in &plugin.aliases {
-            if !is_compas_id(alias) {
-                return Err(format!("plugin {} has invalid alias: {}", plugin.id, alias));
-            }
-            if ids.contains(alias) {
-                return Err(format!(
-                    "plugin {} alias collides with canonical plugin id: {}",
-                    plugin.id, alias
-                ));
-            }
-            if !aliases.insert(alias.clone()) {
-                return Err(format!("duplicate alias in manifest: {}", alias));
-            }
-        }
-        let plugin_path = Path::new(&plugin.path);
-        if plugin_path.as_os_str().is_empty() || plugin_path.is_absolute() {
-            return Err(format!(
-                "plugin {} has unsafe path: {}",
-                plugin.id, plugin.path
-            ));
-        }
-        if plugin.path.contains('\\') {
-            return Err(format!(
-                "plugin {} has unsafe path (backslashes forbidden): {}",
-                plugin.id, plugin.path
-            ));
-        }
-        for c in plugin_path.components() {
-            match c {
-                Component::CurDir | Component::Normal(_) => {}
-                _ => {
-                    return Err(format!(
-                        "plugin {} has unsafe path: {}",
-                        plugin.id, plugin.path
-                    ));
-                }
-            }
-        }
-        if plugin.package.version.trim().is_empty() {
-            return Err(format!("plugin {} has empty package.version", plugin.id));
-        }
-        if plugin.package.entrypoint.trim().is_empty() {
-            return Err(format!("plugin {} has empty package.entrypoint", plugin.id));
-        }
-    }
-
-    for pack in &manifest.packs {
-        if !is_compas_id(&pack.id) {
-            return Err(format!("invalid pack id in manifest: {}", pack.id));
-        }
-        if pack.description.trim().len() < 8 {
-            return Err(format!("pack {} description too short", pack.id));
-        }
-        if pack.plugins.is_empty() {
-            return Err(format!("pack {} has empty plugins list", pack.id));
-        }
-        for plugin_id in &pack.plugins {
-            if !ids.contains(plugin_id) {
-                return Err(format!(
-                    "pack {} references unknown plugin id: {}",
-                    pack.id, plugin_id
-                ));
-            }
-        }
-    }
-
-    Ok(())
-}
-
-const OFFICIAL_REGISTRY_COSIGN_PUBKEY_PEM: &str = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExWXyUnb9j+0nAopQJWPU2JObKitu\nfNacvZOK6C4P/AeUOQc0PmK3rSrm/NRII6pCRssOC65QTbt+0zi0dzySwQ==\n-----END PUBLIC KEY-----\n";
-
-fn verify_cosign_blob_signature(
-    manifest_bytes: &[u8],
-    signature_b64: &str,
-    pubkey_pem: &str,
-) -> Result<String, String> {
-    let key = VerifyingKey::from_public_key_pem(pubkey_pem)
-        .map_err(|e| format!("failed to parse cosign public key PEM: {e}"))?;
-    let sig_raw = signature_b64.trim();
-    if sig_raw.is_empty() {
-        return Err("empty signature".to_string());
-    }
-    let sig_bytes = general_purpose::STANDARD
-        .decode(sig_raw)
-        .map_err(|e| format!("failed to base64-decode signature: {e}"))?;
-    let sig = P256Signature::from_der(&sig_bytes)
-        .map_err(|e| format!("failed to parse DER ECDSA signature: {e}"))?;
-    key.verify(manifest_bytes, &sig)
-        .map_err(|e| format!("invalid manifest signature: {e}"))?;
-
-    let key_id = sha256_hex(key.to_encoded_point(false).as_bytes());
-    Ok(key_id)
 }
 
 fn ensure_clean_dir(path: &Path) -> Result<(), String> {

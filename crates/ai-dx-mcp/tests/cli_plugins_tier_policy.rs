@@ -68,9 +68,14 @@ fn write_manifest(
         "aliases": ["spec-gate"],
         "path": "plugins/spec-adr-gate",
         "description": "Fixture plugin for tier policy tests",
+        "capabilities": ["adr", "gate"],
+        "requires": [],
+        "runtime_kind": "tool-backed",
+        "cost_class": "medium",
+        "artifacts_produced": [],
         "package": {
             "version": "0.1.0",
-            "type": "script",
+            "type": "tool-backed",
             "maturity": "stable",
             "runtime": "python3",
             "portable": true,
@@ -101,7 +106,15 @@ fn write_manifest(
         "archive": { "name": archive_name, "sha256": sha256_file(archive_path) },
         "plugins": [ plugin ],
         "packs": [
-            { "id": "core", "description": "Fixture pack", "plugins": ["spec-adr-gate"] }
+            {
+                "id": "core",
+                "description": "Fixture pack",
+                "plugins": ["spec-adr-gate"],
+                "capabilities": ["adr", "gate"],
+                "requires": [],
+                "runtime_kind": "tool-backed",
+                "cost_class": "medium"
+            }
         ]
     });
     write_file(

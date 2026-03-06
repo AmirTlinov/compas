@@ -215,9 +215,14 @@ fn write_manifest(root: &Path, archive_path: &Path, override_sha256: Option<&str
                 "aliases": ["spec-gate"],
                 "path": "plugins/spec-adr-gate",
                 "description": "Fixture plugin for archive security tests",
+                "capabilities": ["adr", "gate"],
+                "requires": [],
+                "runtime_kind": "tool-backed",
+                "cost_class": "medium",
+                "artifacts_produced": [],
                 "package": {
                     "version": "0.1.0",
-                    "type": "script",
+                    "type": "tool-backed",
                     "maturity": "stable",
                     "runtime": "python3",
                     "portable": true,
@@ -228,7 +233,15 @@ fn write_manifest(root: &Path, archive_path: &Path, override_sha256: Option<&str
             }
         ],
         "packs": [
-            { "id": "core", "description": "Fixture pack", "plugins": ["spec-adr-gate"] }
+            {
+                "id": "core",
+                "description": "Fixture pack",
+                "plugins": ["spec-adr-gate"],
+                "capabilities": ["adr", "gate"],
+                "requires": [],
+                "runtime_kind": "tool-backed",
+                "cost_class": "medium"
+            }
         ]
     });
     write_file(

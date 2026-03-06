@@ -42,9 +42,67 @@ fn fixture_manifest_bytes() -> String {
         "      \"aliases\": [\"spec-gate\"],",
         "      \"path\": \"plugins/spec-adr-gate\",",
         "      \"description\": \"Fixture plugin for signature verification tests\",",
+        "      \"capabilities\": [\"adr\", \"gate\"],",
+        "      \"requires\": [],",
+        "      \"runtime_kind\": \"tool-backed\",",
+        "      \"cost_class\": \"medium\",",
+        "      \"artifacts_produced\": [],",
         "      \"package\": {",
         "        \"version\": \"0.1.0\",",
-        "        \"type\": \"script\",",
+        "        \"type\": \"tool-backed\",",
+        "        \"maturity\": \"stable\",",
+        "        \"runtime\": \"python3\",",
+        "        \"portable\": true,",
+        "        \"languages\": [\"agnostic\"],",
+        "        \"entrypoint\": \"README.md\",",
+        "        \"license\": \"MIT\"",
+        "      },",
+        "      \"tier\": \"community\",",
+        "      \"maintainers\": [\"AmirTlinov\"],",
+        "      \"tags\": [\"quality\"],",
+        "      \"compat\": {\"compas\": {\"min\": \"0.1.0\", \"max\": null}}",
+        "    }",
+        "  ],",
+        "  \"packs\": [",
+        "    {",
+        "      \"id\": \"core\",",
+        "      \"description\": \"Fixture pack\",",
+        "      \"plugins\": [\"spec-adr-gate\"],",
+        "      \"capabilities\": [\"adr\", \"gate\"],",
+        "      \"requires\": [],",
+        "      \"runtime_kind\": \"tool-backed\",",
+        "      \"cost_class\": \"medium\"",
+        "    }",
+        "  ]",
+        "}",
+        "",
+    ]
+    .join("\n")
+}
+
+fn prior_pack_shape_fixture_manifest_bytes() -> String {
+    [
+        "{",
+        "  \"schema\": \"compas.registry.manifest.v1\",",
+        "  \"registry_version\": \"fixture-prior-pack\",",
+        "  \"archive\": {",
+        "    \"name\": \"compas_plugins-fixture.tar.gz\",",
+        "    \"sha256\": \"0000000000000000000000000000000000000000000000000000000000000000\"",
+        "  },",
+        "  \"plugins\": [",
+        "    {",
+        "      \"id\": \"spec-adr-gate\",",
+        "      \"aliases\": [\"spec-gate\"],",
+        "      \"path\": \"plugins/spec-adr-gate\",",
+        "      \"description\": \"Fixture plugin for signature verification tests\",",
+        "      \"capabilities\": [\"adr\", \"gate\"],",
+        "      \"requires\": [],",
+        "      \"runtime_kind\": \"tool-backed\",",
+        "      \"cost_class\": \"medium\",",
+        "      \"artifacts_produced\": [],",
+        "      \"package\": {",
+        "        \"version\": \"0.1.0\",",
+        "        \"type\": \"tool-backed\",",
         "        \"maturity\": \"stable\",",
         "        \"runtime\": \"python3\",",
         "        \"portable\": true,",
@@ -174,5 +232,35 @@ fn plugins_list_rejects_tampered_manifest() {
     assert!(
         stderr.contains("invalid manifest signature") || stderr.contains("signature"),
         "unexpected stderr: {stderr}"
+    );
+}
+
+#[test]
+fn plugins_list_accepts_prior_pack_shape_without_aggregate_metadata() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let dir = workspace.path();
+
+    let manifest = prior_pack_shape_fixture_manifest_bytes();
+    let (sig_b64, pubkey_pem) = sign_manifest_b64(manifest.as_bytes());
+    let pubkey_path = write_manifest_fixture(dir, &manifest, &sig_b64, &pubkey_pem);
+
+    let args = vec![
+        "plugins".to_string(),
+        "list".to_string(),
+        "--registry".to_string(),
+        dir.join("registry.manifest.v1.json")
+            .to_string_lossy()
+            .to_string(),
+        "--".to_string(),
+        "--json".to_string(),
+        "--pubkey".to_string(),
+        pubkey_path.to_string_lossy().to_string(),
+    ];
+    let out = run_compas(&args);
+    assert!(
+        out.status.success(),
+        "stdout={}, stderr={}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
     );
 }

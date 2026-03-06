@@ -233,11 +233,10 @@ fn packs_lock_toml(entries: Vec<PackLockEntryV1>) -> Result<String, ApiError> {
     })
 }
 
-/// Generate an init plan (dry-run) for a repo based on detected/selected packs.
-///
-/// This slice intentionally does not apply the plan and does not perform any external I/O
-/// (network download / vendoring).
-pub(crate) fn plan_init(repo_root: &Path, req: &InitRequest) -> Result<InitPlan, ApiError> {
+pub(crate) fn selected_packs_for_init(
+    repo_root: &Path,
+    req: &InitRequest,
+) -> Result<Vec<crate::packs::schema::PackManifestV1>, ApiError> {
     if req.external_packs.as_ref().is_some_and(|v| !v.is_empty()) {
         return Err(api_err(
             "init.external_packs_unsupported",
@@ -275,10 +274,6 @@ pub(crate) fn plan_init(repo_root: &Path, req: &InitRequest) -> Result<InitPlan,
     selected_ids.sort();
     selected_ids.dedup();
 
-    // Universal bootstrap: when no builtin pack is detected, still scaffold compas files
-    // (plugin + quality contract + empty packs.lock). Gate remains fail-closed with
-    // gate.empty_sequence until project tools are wired explicitly.
-
     let mut packs: Vec<crate::packs::schema::PackManifestV1> =
         Vec::with_capacity(selected_ids.len());
     for id in &selected_ids {
@@ -290,6 +285,33 @@ pub(crate) fn plan_init(repo_root: &Path, req: &InitRequest) -> Result<InitPlan,
         })?;
         packs.push(m.clone());
     }
+    Ok(packs)
+}
+
+pub(crate) fn detected_repo_languages(
+    repo_root: &Path,
+    req: &InitRequest,
+) -> Result<Vec<String>, ApiError> {
+    let packs = selected_packs_for_init(repo_root, req)?;
+    let mut languages: BTreeSet<String> = BTreeSet::new();
+    for pack in packs {
+        for language in pack.pack.languages {
+            languages.insert(language);
+        }
+    }
+    Ok(languages.into_iter().collect())
+}
+
+/// Generate an init plan (dry-run) for a repo based on detected/selected packs.
+///
+/// This slice intentionally does not apply the plan and does not perform any external I/O
+/// (network download / vendoring).
+pub(crate) fn plan_init(repo_root: &Path, req: &InitRequest) -> Result<InitPlan, ApiError> {
+    // Universal bootstrap: when no builtin pack is detected, still scaffold compas files
+    // (plugin + quality contract + empty packs.lock). Gate remains fail-closed with
+    // gate.empty_sequence until project tools are wired explicitly.
+
+    let packs = selected_packs_for_init(repo_root, req)?;
 
     // tools/custom/*/tool.toml
     let mut writes: Vec<InitWriteFile> = vec![];

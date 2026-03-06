@@ -11,6 +11,7 @@ mod hash;
 mod init;
 pub mod judge;
 pub mod packs;
+mod registry_manifest;
 pub mod repo;
 mod repo_import;
 mod repo_strict;

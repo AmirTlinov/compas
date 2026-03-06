@@ -203,10 +203,19 @@ fn init_summary(out: &InitOutput) -> String {
         .as_ref()
         .map(|p| (p.writes.len(), p.deletes.len()))
         .unwrap_or((0, 0));
+    let recommendations = out
+        .recommendations
+        .as_ref()
+        .map(|value| value.recommended.len())
+        .unwrap_or(0);
+    let warnings = out.warnings.len();
     let why = if let Some(err) = &out.error {
         format!("{}.", err.code)
     } else {
-        format!("writes={}, deletes={}.", writes, deletes)
+        format!(
+            "writes={}, deletes={}, recommendations={}, warnings={}.",
+            writes, deletes, recommendations, warnings
+        )
     };
     let next = if out.ok && out.applied {
         "run compas.validate mode=ratchet.".to_string()

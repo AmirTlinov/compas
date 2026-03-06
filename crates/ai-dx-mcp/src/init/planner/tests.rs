@@ -20,6 +20,7 @@ fn init_req() -> InitRequest {
         repo_root: None,
         apply: Some(false),
         profile: None,
+        registry_source: None,
         packs: None,
         external_packs: None,
     }

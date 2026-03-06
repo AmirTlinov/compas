@@ -2,10 +2,14 @@
 //!
 //! Guardrail: network capability is represented as a token that is constructible only from here.
 
-use std::path::Path;
+use std::{
+    future::Future,
+    path::{Path, PathBuf},
+};
 
 mod apply;
 mod planner;
+mod recommendations;
 
 /// Capability token that authorizes network I/O.
 ///
@@ -26,6 +30,38 @@ fn allow_network_for_init() -> NetAllowed {
 #[allow(unused_imports)] // Used by compas.init (and later by apply+vendoring slices).
 pub(crate) use planner::plan_init;
 
+fn block_on_init_future<F, T>(future: F) -> Result<T, crate::api::ApiError>
+where
+    F: Future<Output = Result<T, crate::api::ApiError>> + Send + 'static,
+    T: Send + 'static,
+{
+    fn build_runtime() -> Result<tokio::runtime::Runtime, crate::api::ApiError> {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| crate::api::ApiError {
+                code: "init.runtime_build_failed".to_string(),
+                message: format!("failed to build init runtime for registry recommendations: {e}"),
+            })
+    }
+
+    if tokio::runtime::Handle::try_current().is_ok() {
+        return std::thread::spawn(move || -> Result<T, crate::api::ApiError> {
+            let runtime = build_runtime()?;
+            runtime.block_on(future)
+        })
+        .join()
+        .map_err(|_| crate::api::ApiError {
+            code: "init.runtime_join_failed".to_string(),
+            message: "registry recommendation worker panicked while resolving init metadata"
+                .to_string(),
+        })?;
+    }
+
+    let runtime = build_runtime()?;
+    runtime.block_on(future)
+}
+
 pub(crate) fn init(repo_root: &str, req: crate::api::InitRequest) -> crate::api::InitOutput {
     let plan = match planner::plan_init(Path::new(repo_root), &req) {
         Ok(p) => p,
@@ -33,12 +69,36 @@ pub(crate) fn init(repo_root: &str, req: crate::api::InitRequest) -> crate::api:
             return crate::api::InitOutput {
                 ok: false,
                 error: Some(e),
+                warnings: vec![],
                 repo_root: repo_root.to_string(),
                 applied: false,
                 plan: None,
+                recommendations: None,
                 summary_md: None,
                 payload_meta: None,
             };
+        }
+    };
+    let mut warnings = vec![];
+    let recommendations = match req
+        .registry_source
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        None => None,
+        Some(_) => {
+            let repo_root_owned = PathBuf::from(repo_root);
+            let req_owned = req.clone();
+            match block_on_init_future(async move {
+                recommendations::registry_pack_recommendations(&repo_root_owned, &req_owned).await
+            }) {
+                Ok(value) => value,
+                Err(e) => {
+                    warnings.push(e);
+                    None
+                }
+            }
         }
     };
 
@@ -47,9 +107,11 @@ pub(crate) fn init(repo_root: &str, req: crate::api::InitRequest) -> crate::api:
         return crate::api::InitOutput {
             ok: false,
             error: Some(e),
+            warnings,
             repo_root: repo_root.to_string(),
             applied: false,
             plan: Some(plan),
+            recommendations,
             summary_md: None,
             payload_meta: None,
         };
@@ -78,9 +140,11 @@ pub(crate) fn init(repo_root: &str, req: crate::api::InitRequest) -> crate::api:
     crate::api::InitOutput {
         ok: true,
         error: None,
+        warnings,
         repo_root: repo_root.to_string(),
         applied: apply,
         plan: Some(plan_for_output),
+        recommendations,
         summary_md: None,
         payload_meta: None,
     }
@@ -164,8 +228,8 @@ pub(crate) async fn download_pack_archive_http(
 
 #[cfg(test)]
 mod tests {
-    use super::allow_network_for_init;
-    use super::download_pack_archive_http;
+    use super::{allow_network_for_init, block_on_init_future, download_pack_archive_http};
+    use crate::api::ApiError;
 
     #[test]
     fn init_can_acquire_network_capability_token() {
@@ -179,5 +243,15 @@ mod tests {
             .await
             .unwrap_err();
         assert!(err.contains("http"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn block_on_init_future_works_inside_tokio_runtime() {
+        let result = block_on_init_future(async {
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            Ok::<_, ApiError>("ready".to_string())
+        })
+        .expect("block_on future");
+        assert_eq!(result, "ready");
     }
 }
