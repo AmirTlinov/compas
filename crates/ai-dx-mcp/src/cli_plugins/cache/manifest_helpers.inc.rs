@@ -1,11 +1,3 @@
-struct ManifestResolved {
-    manifest: RegistryManifestV1,
-    manifest_sha256: String,
-    signature_key_id: Option<String>,
-    base_url: Option<String>,
-    base_dir: Option<PathBuf>,
-}
-
 fn parse_string_flag(args: &[String], flag: &str) -> Result<Option<String>, String> {
     let mut i = 0usize;
     while i < args.len() {
@@ -101,116 +93,20 @@ fn resolve_plugin_ids_from_manifest(
     Ok(resolved)
 }
 
-fn extract_base_url(url: &str) -> Option<String> {
-    let (base, _tail) = url.rsplit_once('/')?;
-    Some(base.to_string())
-}
-
-fn signature_source_for_manifest_source(source: &str) -> String {
-    format!("{source}.sig")
-}
-
-#[cfg(feature = "full")]
-async fn fetch_url_bytes(url: &str, max_bytes: usize) -> Result<Vec<u8>, String> {
-    let response = reqwest::Client::new()
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| format!("failed to download {url}: {e}"))?;
-    let response = response
-        .error_for_status()
-        .map_err(|e| format!("download failed for {url}: {e}"))?;
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| format!("failed to read body from {url}: {e}"))?;
-    if bytes.len() > max_bytes {
-        return Err(format!(
-            "downloaded payload too large from {url}: {} bytes (max {max_bytes})",
-            bytes.len()
-        ));
-    }
-    Ok(bytes.to_vec())
-}
-
-#[cfg(not(feature = "full"))]
-async fn fetch_url_bytes(url: &str, _max_bytes: usize) -> Result<Vec<u8>, String> {
-    Err(format!(
-        "URL registry sources are unavailable in lite build ({url}); use local --registry path"
-    ))
-}
-
 async fn load_verified_manifest(parsed: &PluginsCli) -> Result<ManifestResolved, String> {
     let allow_unsigned = parse_bool_flag(&parsed.installer_args, "--allow-unsigned");
     let pubkey_override = parse_string_flag(&parsed.installer_args, "--pubkey")?;
-
-    let registry_source = parsed.registry_source.trim().to_string();
-    let manifest_bytes: Vec<u8>;
-    let mut signature_b64: Option<String> = None;
-    let mut base_url: Option<String> = None;
-    let mut base_dir: Option<PathBuf> = None;
-
-    if is_http_url(&registry_source) {
-        manifest_bytes = fetch_url_bytes(&registry_source, 5 * 1024 * 1024).await?;
-        if !allow_unsigned {
-            let sig_url = signature_source_for_manifest_source(&registry_source);
-            let sig_bytes = fetch_url_bytes(&sig_url, 512 * 1024).await?;
-            signature_b64 = Some(
-                String::from_utf8(sig_bytes)
-                    .map_err(|e| format!("signature is not valid UTF-8: {e}"))?,
-            );
-        }
-        base_url = extract_base_url(&registry_source);
-    } else {
-        let path = PathBuf::from(&registry_source);
-        let path = fs::canonicalize(&path)
-            .map_err(|e| format!("failed to resolve registry source {}: {e}", path.display()))?;
-        manifest_bytes = fs::read(&path)
-            .map_err(|e| format!("failed to read manifest {}: {e}", path.display()))?;
-        let sig_path = path.with_extension(format!(
-            "{}.sig",
-            path.extension().and_then(|s| s.to_str()).unwrap_or("json")
-        ));
-        if sig_path.is_file() {
-            signature_b64 =
-                Some(fs::read_to_string(&sig_path).map_err(|e| {
-                    format!("failed to read signature {}: {e}", sig_path.display())
-                })?);
-        }
-        base_dir = path.parent().map(PathBuf::from);
-    }
-
-    let manifest_sha256 = sha256_hex(&manifest_bytes);
-    let manifest: RegistryManifestV1 = serde_json::from_slice(&manifest_bytes)
-        .map_err(|e| format!("failed to parse registry manifest JSON: {e}"))?;
-    validate_manifest_v1(&manifest)?;
-
     let pubkey_pem = if let Some(path) = pubkey_override {
-        fs::read_to_string(&path).map_err(|e| format!("failed to read pubkey {}: {e}", path))?
+        Some(fs::read_to_string(&path).map_err(|e| format!("failed to read pubkey {}: {e}", path))?)
     } else {
-        OFFICIAL_REGISTRY_COSIGN_PUBKEY_PEM.to_string()
-    };
-
-    let signature_key_id = if allow_unsigned {
         None
-    } else {
-        let sig = signature_b64.as_deref().ok_or_else(|| {
-            "missing registry manifest signature (.sig); use --allow-unsigned to bypass".to_string()
-        })?;
-        Some(verify_cosign_blob_signature(
-            &manifest_bytes,
-            sig,
-            &pubkey_pem,
-        )?)
     };
-
-    Ok(ManifestResolved {
-        manifest,
-        manifest_sha256,
-        signature_key_id,
-        base_url,
-        base_dir,
-    })
+    crate::cli::registry_manifest::load_verified_manifest_source(
+        &parsed.registry_source,
+        allow_unsigned,
+        pubkey_pem,
+    )
+    .await
 }
 
 fn registry_cache_root_for_manifest(resolved: &ManifestResolved) -> PathBuf {
@@ -519,4 +415,3 @@ fn plugin_by_id<'a>(
 fn plugin_sunset_marker(plugin: &RegistryPluginV1) -> Option<&serde_json::Value> {
     plugin.extra.get(SUNSET_META_COMPAT_KEY)
 }
-

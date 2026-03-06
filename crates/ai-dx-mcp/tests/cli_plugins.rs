@@ -63,9 +63,14 @@ fn write_registry_fixture(root: &std::path::Path) -> RegistryFixture {
                 "owner": "test",
                 "description": "Spec gate plugin",
                 "tier": "community",
+                "capabilities": ["adr", "gate"],
+                "requires": [],
+                "runtime_kind": "tool-backed",
+                "cost_class": "medium",
+                "artifacts_produced": [],
                 "package": {
                     "version": "1.0.0",
-                    "type": "python",
+                    "type": "tool-backed",
                     "maturity": "stable",
                     "runtime": "python3",
                     "portable": true,
@@ -82,9 +87,14 @@ fn write_registry_fixture(root: &std::path::Path) -> RegistryFixture {
                 "owner": "test",
                 "description": "Experimental plugin",
                 "tier": "experimental",
+                "capabilities": ["example", "lint"],
+                "requires": [],
+                "runtime_kind": "tool-backed",
+                "cost_class": "medium",
+                "artifacts_produced": [],
                 "package": {
                     "version": "0.1.0",
-                    "type": "python",
+                    "type": "tool-backed",
                     "maturity": "experimental",
                     "runtime": "python3",
                     "portable": true,
@@ -98,7 +108,11 @@ fn write_registry_fixture(root: &std::path::Path) -> RegistryFixture {
             {
                 "id": "ai-core",
                 "description": "Core AI quality plugin set",
-                "plugins": ["spec-adr-gate"]
+                "plugins": ["spec-adr-gate"],
+                "capabilities": ["adr", "gate"],
+                "requires": [],
+                "runtime_kind": "tool-backed",
+                "cost_class": "medium"
             }
         ]
     });

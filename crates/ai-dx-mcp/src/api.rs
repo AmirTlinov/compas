@@ -7,7 +7,10 @@ mod init;
 mod insights;
 
 pub use canonical::{CanonicalToolId, CanonicalToolsConfig};
-pub use init::{ExternalPackRef, InitOutput, InitPlan, InitRequest, InitWriteFile};
+pub use init::{
+    ExternalPackRef, InitOutput, InitPlan, InitRecommendations, InitRegistryPackRecommendation,
+    InitRequest, InitWriteFile,
+};
 pub use insights::{
     AgentDigest, CoverageSummary, FindingDetailsV2, FindingSeverity, FindingV2, RiskSummary,
     TrustScore, TrustWeights,
