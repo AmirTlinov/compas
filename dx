@@ -14,6 +14,7 @@ Usage:
   ./dx validate [ratchet|strict|warn] [--write-baseline] [--repo-root <path>]
   ./dx init [--apply] [--packs <builtin:...,...>] [--repo-root <path>]
   ./dx gate <ci_fast|ci-fast|ci|flagship> [--dry-run] [--write-witness] [--repo-root <path>]
+  ./dx exec <tool_id> [--dry-run] [--repo-root <path>] [-- <tool-args...>]
   ./dx ci_fast [--dry-run] [--write-witness] [--repo-root <path>]
   ./dx ci-fast [--dry-run] [--write-witness] [--repo-root <path>]
   ./dx ci [--dry-run] [--write-witness] [--repo-root <path>]
@@ -78,6 +79,16 @@ case "$cmd" in
     esac
 
     run_compas gate "$kind" "$@"
+    exit $?
+    ;;
+
+  exec)
+    if [[ $# -lt 1 ]]; then
+      echo "dx: exec tool_id is required" >&2
+      usage >&2
+      exit 2
+    fi
+    run_compas exec "$@"
     exit $?
     ;;
 
