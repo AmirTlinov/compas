@@ -1,6 +1,6 @@
 use ai_dx_mcp::{
     api::ResponseMode,
-    response::{finalize_gate, finalize_init, finalize_validate},
+    response::{finalize_exec, finalize_gate, finalize_init, finalize_validate},
     server::AiDxServer,
 };
 use rmcp::ServiceExt;
@@ -109,13 +109,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             return Ok(());
         }
+        Some("exec") => {
+            let (tool_id, extra_args, dry_run, repo_root) = match cli::parse_exec_cli(&args[2..]) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("compas: {e}");
+                    std::process::exit(2);
+                }
+            };
+            let out = ai_dx_mcp::app::exec_tool(&repo_root, tool_id, extra_args, dry_run).await;
+            let out = finalize_exec(out);
+            println!("{}", serde_json::to_string_pretty(&out)?);
+            if !out.ok {
+                std::process::exit(1);
+            }
+            return Ok(());
+        }
         Some(other)
             if matches!(other, "--stdio" | "stdio" | "--mcp" | "mcp")
                 || (other == "--transport" && args.get(2).is_some_and(|v| v == "stdio"))
                 || other.starts_with("--") => {}
         Some(other) => {
             eprintln!(
-                "compas: unknown command `{other}`; use init|validate|gate|plugins, or no args to start MCP server"
+                "compas: unknown command `{other}`; use init|validate|gate|exec|plugins, or no args to start MCP server"
             );
             std::process::exit(2);
         }

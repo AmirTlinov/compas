@@ -11,7 +11,7 @@ const PLUGIN_REGISTRY_ENV: &str = "COMPAS_PLUGIN_REGISTRY";
 
 pub(crate) fn print_help() {
     println!(
-        "Usage:\n  compas_mcp help\n  compas_mcp version\n  compas_mcp init [--apply] [--profile <ai_first>] [--registry <url-or-path>] [--packs <builtin:...,...>] [--repo-root <path>]\n  compas_mcp validate [ratchet|strict|warn] [--write-baseline] [--baseline-reason <text>] [--baseline-owner <id>] [--repo-root <path>]\n  compas_mcp gate [ci_fast|ci|flagship] [--dry-run] [--write-witness] [--repo-root <path>]\n  compas_mcp plugins [install|update|uninstall|list|packs|info|doctor] [--registry <url-or-path>] [--repo-root <path>] [--admin-lane] [--allow-experimental] [--allow-sunset] [-- <registry-installer-args...>]\n\nNotes:\n  - No args => start MCP server over stdio.\n  - v1-style flags --init/--validate/--gate are removed in v2.\n  - `init --registry` is advisory only: it loads a signed manifest and returns bootstrap recommendations without mutating install policy.\n  - Defaults via env:\n      AI_DX_REPO_ROOT=<path>\n      AI_DX_WRITE_WITNESS=1|true\n      COMPAS_PLUGIN_REGISTRY=<url-or-path>\n\nExamples:\n  compas_mcp init --apply\n  compas_mcp init --apply --profile ai_first\n  compas_mcp init --registry https://github.com/AmirTlinov/compas-plugin-registry/releases/latest/download/registry.manifest.v1.json\n  compas_mcp validate ratchet\n  compas_mcp validate ratchet --write-baseline --baseline-reason \"Quarterly baseline refresh after policy change\" --baseline-owner team-lead\n  compas_mcp gate ci_fast --dry-run\n  compas_mcp plugins list -- --json\n  compas_mcp plugins packs -- --json\n  compas_mcp plugins info spec-adr-gate\n  compas_mcp plugins install --admin-lane --plugins spec-adr-gate\n  compas_mcp plugins install --admin-lane --plugins experimental-plugin --allow-experimental\n  compas_mcp plugins update --admin-lane --plugins sunset-plugin --allow-sunset\n"
+        "Usage:\n  compas_mcp help\n  compas_mcp version\n  compas_mcp init [--apply] [--profile <ai_first>] [--registry <url-or-path>] [--packs <builtin:...,...>] [--repo-root <path>]\n  compas_mcp validate [ratchet|strict|warn] [--write-baseline] [--baseline-reason <text>] [--baseline-owner <id>] [--repo-root <path>]\n  compas_mcp gate [ci_fast|ci|flagship] [--dry-run] [--write-witness] [--repo-root <path>]\n  compas_mcp exec <tool_id> [--dry-run] [--repo-root <path>] [-- <tool-args...>]\n  compas_mcp plugins [install|update|uninstall|list|packs|info|doctor] [--registry <url-or-path>] [--repo-root <path>] [--admin-lane] [--allow-experimental] [--allow-sunset] [-- <registry-installer-args...>]\n\nNotes:\n  - No args => start MCP server over stdio.\n  - v1-style flags --init/--validate/--gate are removed in v2.\n  - `init --registry` is advisory only: it loads a signed manifest and returns bootstrap recommendations without mutating install policy.\n  - Defaults via env:\n      AI_DX_REPO_ROOT=<path>\n      AI_DX_WRITE_WITNESS=1|true\n      COMPAS_PLUGIN_REGISTRY=<url-or-path>\n\nExamples:\n  compas_mcp init --apply\n  compas_mcp init --apply --profile ai_first\n  compas_mcp init --registry https://github.com/AmirTlinov/compas-plugin-registry/releases/latest/download/registry.manifest.v1.json\n  compas_mcp validate ratchet\n  compas_mcp validate ratchet --write-baseline --baseline-reason \"Quarterly baseline refresh after policy change\" --baseline-owner team-lead\n  compas_mcp gate ci_fast --dry-run\n  compas_mcp exec merge-truth-check -- --profile ci\n  compas_mcp plugins list -- --json\n  compas_mcp plugins packs -- --json\n  compas_mcp plugins info spec-adr-gate\n  compas_mcp plugins install --admin-lane --plugins spec-adr-gate\n  compas_mcp plugins install --admin-lane --plugins experimental-plugin --allow-experimental\n  compas_mcp plugins update --admin-lane --plugins sunset-plugin --allow-sunset\n"
     );
 }
 
@@ -287,4 +287,105 @@ pub(crate) fn parse_gate_cli(args: &[String]) -> Result<(GateKind, bool, bool, S
             .ok()
             .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
     Ok((kind, dry_run, write_witness, default_repo_root(repo_root)))
+}
+
+pub(crate) fn parse_exec_cli(
+    args: &[String],
+) -> Result<(String, Vec<String>, bool, String), String> {
+    let tool_id = args
+        .first()
+        .filter(|v| !v.starts_with("--"))
+        .cloned()
+        .ok_or_else(|| "exec requires <tool_id>".to_string())?;
+
+    let mut dry_run = false;
+    let mut repo_root: Option<String> = None;
+    let mut extra_args: Vec<String> = Vec::new();
+
+    let mut i = 1usize;
+    let mut passthrough = false;
+    while i < args.len() {
+        let a = &args[i];
+        if passthrough {
+            extra_args.push(a.clone());
+            i += 1;
+            continue;
+        }
+        match a.as_str() {
+            "--" => {
+                passthrough = true;
+                i += 1;
+            }
+            "--dry-run" => {
+                dry_run = true;
+                i += 1;
+            }
+            "--repo-root" => {
+                let v = args
+                    .get(i + 1)
+                    .ok_or_else(|| "--repo-root requires a value".to_string())?;
+                if v.starts_with("--") {
+                    return Err("--repo-root requires a value".to_string());
+                }
+                repo_root = Some(v.clone());
+                i += 2;
+            }
+            _ if !a.starts_with("--") => {
+                return Err(format!(
+                    "unexpected positional argument: {a}; use `--` before tool args"
+                ));
+            }
+            _ => return Err(format!("unknown argument: {a}")),
+        }
+    }
+
+    Ok((tool_id, extra_args, dry_run, default_repo_root(repo_root)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{GateKind, parse_exec_cli, parse_gate_cli};
+
+    #[test]
+    fn parse_exec_cli_parses_tool_flags_and_passthrough_args() {
+        let args = vec![
+            "merge-truth-check".to_string(),
+            "--repo-root".to_string(),
+            "/tmp/repo".to_string(),
+            "--dry-run".to_string(),
+            "--".to_string(),
+            "--profile".to_string(),
+            "ci".to_string(),
+        ];
+        let (tool_id, extra_args, dry_run, repo_root) =
+            parse_exec_cli(&args).expect("exec args should parse");
+        assert_eq!(tool_id, "merge-truth-check");
+        assert_eq!(extra_args, vec!["--profile".to_string(), "ci".to_string()]);
+        assert!(dry_run);
+        assert_eq!(repo_root, "/tmp/repo");
+    }
+
+    #[test]
+    fn parse_exec_cli_requires_tool_id() {
+        let err = parse_exec_cli(&[]).expect_err("tool id is required");
+        assert!(err.contains("exec requires <tool_id>"));
+    }
+
+    #[test]
+    fn parse_exec_cli_requires_double_dash_before_tool_args() {
+        let args = vec!["merge-truth-check".to_string(), "ci".to_string()];
+        let err = parse_exec_cli(&args).expect_err("positional arg after tool id must fail");
+        assert!(err.contains("use `--` before tool args"));
+    }
+
+    #[test]
+    fn parse_gate_cli_honors_canonical_gate_ids() {
+        let args = vec!["ci_fast".to_string(), "--dry-run".to_string()];
+        let (kind, dry_run, write_witness, repo_root) =
+            parse_gate_cli(&args).expect("gate args should parse");
+        assert_eq!(kind, GateKind::CiFast);
+        assert!(dry_run);
+        assert!(!write_witness);
+        assert_eq!(repo_root, ".");
+    }
 }

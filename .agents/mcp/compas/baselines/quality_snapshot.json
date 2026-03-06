@@ -11,7 +11,7 @@
     "crates/ai-dx-mcp/src/api/canonical.rs": 34,
     "crates/ai-dx-mcp/src/api/init.rs": 68,
     "crates/ai-dx-mcp/src/api/insights.rs": 87,
-    "crates/ai-dx-mcp/src/app.rs": 631,
+    "crates/ai-dx-mcp/src/app.rs": 649,
     "crates/ai-dx-mcp/src/app/support.rs": 147,
     "crates/ai-dx-mcp/src/checks/arch_layers.rs": 295,
     "crates/ai-dx-mcp/src/checks/boundary.rs": 180,
@@ -29,7 +29,7 @@
     "crates/ai-dx-mcp/src/checks/supply_chain.rs": 260,
     "crates/ai-dx-mcp/src/checks/surface.rs": 178,
     "crates/ai-dx-mcp/src/checks/tool_budget.rs": 106,
-    "crates/ai-dx-mcp/src/cli.rs": 264,
+    "crates/ai-dx-mcp/src/cli.rs": 356,
     "crates/ai-dx-mcp/src/cli/init_parse.rs": 76,
     "crates/ai-dx-mcp/src/cli_plugins.rs": 5,
     "crates/ai-dx-mcp/src/cli_plugins/cache.rs": 382,
@@ -53,11 +53,11 @@
     "crates/ai-dx-mcp/src/init/planner/profile_docs.rs": 45,
     "crates/ai-dx-mcp/src/init/planner/tests.rs": 424,
     "crates/ai-dx-mcp/src/init/recommendations.rs": 271,
-    "crates/ai-dx-mcp/src/init/recommendations/tests.rs": 359,
+    "crates/ai-dx-mcp/src/init/recommendations/tests.rs": 351,
     "crates/ai-dx-mcp/src/judge/mod.rs": 220,
     "crates/ai-dx-mcp/src/judge/registry.rs": 158,
     "crates/ai-dx-mcp/src/lib.rs": 26,
-    "crates/ai-dx-mcp/src/main.rs": 126,
+    "crates/ai-dx-mcp/src/main.rs": 142,
     "crates/ai-dx-mcp/src/mcp_stdio.rs": 278,
     "crates/ai-dx-mcp/src/packs/builtin.rs": 106,
     "crates/ai-dx-mcp/src/packs/engine.rs": 185,
@@ -73,7 +73,7 @@
     "crates/ai-dx-mcp/src/registry_manifest.rs": 615,
     "crates/ai-dx-mcp/src/repo.rs": 388,
     "crates/ai-dx-mcp/src/repo/checks_merge.rs": 35,
-    "crates/ai-dx-mcp/src/repo/errors.rs": 168,
+    "crates/ai-dx-mcp/src/repo/errors.rs": 164,
     "crates/ai-dx-mcp/src/repo_import.rs": 43,
     "crates/ai-dx-mcp/src/repo_strict.rs": 258,
     "crates/ai-dx-mcp/src/repo_view.rs": 73,
@@ -175,10 +175,10 @@
     "duplicates_universe": 179,
     "duplicates_scanned": 179
   },
-  "written_at": "2026-03-06T14:14:06.112616242+00:00",
+  "written_at": "2026-03-06T18:14:03.641789567+00:00",
   "written_by": {
-    "reason": "Proof-kernel foundation additive contract refresh",
-    "owner": "amir"
+    "reason": "Accept merge-truth exec workflow slice",
+    "owner": "codex"
   },
   "config_hash": "sha256:e11c89bc04855249ce4cb6cff71983b4f123f99b82c9d42e29d21e4da4086642"
 }

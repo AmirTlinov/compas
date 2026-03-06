@@ -110,7 +110,48 @@ fn cli_help_prints_usage() {
     assert!(stdout.contains("Usage:"), "stdout={stdout}");
     assert!(stdout.contains("--profile <ai_first>"), "stdout={stdout}");
     assert!(stdout.contains("validate"), "stdout={stdout}");
+    assert!(stdout.contains("exec <tool_id>"), "stdout={stdout}");
     assert!(stdout.contains("AI_DX_REPO_ROOT"), "stdout={stdout}");
+}
+
+#[test]
+fn cli_exec_unknown_tool_is_reported_cleanly() {
+    let dir = tempfile::tempdir().expect("temp repo");
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+    )
+    .expect("write Cargo.toml");
+    let bin = env!("CARGO_BIN_EXE_ai-dx-mcp");
+    let init = std::process::Command::new(bin)
+        .args(["init", "--apply", "--repo-root"])
+        .arg(dir.path())
+        .output()
+        .expect("run init --apply");
+    assert!(
+        init.status.success(),
+        "init failed: stderr={}",
+        String::from_utf8_lossy(&init.stderr)
+    );
+
+    let out = std::process::Command::new(bin)
+        .args(["exec", "unknown-tool", "--repo-root"])
+        .arg(dir.path())
+        .output()
+        .expect("run exec unknown-tool");
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "stdout={}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    let payload: ai_dx_mcp::api::ToolsRunOutput =
+        serde_json::from_slice(&out.stdout).expect("parse ToolsRunOutput");
+    assert!(!payload.ok, "expected ok=false");
+    assert_eq!(
+        payload.error.as_ref().map(|e| e.code.as_str()),
+        Some("compas.exec.unknown_tool_id")
+    );
 }
 
 #[test]

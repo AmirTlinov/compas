@@ -79,9 +79,16 @@ If you run AI‑only development:
 
 - Keep `ci_fast` deterministic and cheap.
 - Use `gate` for “proof of work” (receipts + witness).
+- Keep merge-readiness as a separate proof step via `exec`, not a fourth gate kind.
+  The canonical path is `compas.exec merge-truth-check -- --profile <ci|flagship>` once the
+  required witness and review artifacts exist.
 - Treat plugin installs as **policy changes**; pin registry versions for CI/reproducibility.
 - `init --profile ai_first` is the opt-in canonical repo-visible scaffold path:
   `AGENTS.md`, `ARCHITECTURE.md`, `docs/index.md`, `docs/exec-plans/{README,TEMPLATE}.md`,
   and `docs/QUALITY_SCORE.md` with managed markers for later proof plugins.
 - Registry recommendations can now match explicit repo signals (for example `ai_first_scaffold`)
   in addition to detected code languages; recommendation flow stays advisory-only.
+- The intended split is:
+  - worker proof: `validate` + `gate`
+  - review/audit proof: canonical review artifacts under `.agents/mcp/compas/reviews/`
+  - merge truth: repo-local `merge-truth-check` artifact assembled from the existing proof set

@@ -2,7 +2,7 @@ use crate::{
     api::{
         ApiError, BaselineMaintenance, BoundarySummary, DecisionStatus, EffectiveConfigSummary,
         GateKind, GateOutput, InitOutput, InitRequest, LocSummary, PublicSurfaceSummary,
-        ValidateMode, ValidateOutput, Violation, ViolationTier,
+        ToolsRunOutput, ToolsRunRequest, ValidateMode, ValidateOutput, Violation, ViolationTier,
     },
     checks::{
         arch_layers::run_arch_layers_check,
@@ -48,6 +48,25 @@ pub(crate) fn map_config_error(repo_root: &str, err: RepoConfigError) -> ApiErro
 
 pub fn compas_init(repo_root: &str, req: InitRequest) -> InitOutput {
     crate::init::init(repo_root, req)
+}
+
+pub async fn exec_tool(
+    repo_root: &str,
+    tool_id: String,
+    args: Vec<String>,
+    dry_run: bool,
+) -> ToolsRunOutput {
+    crate::server_catalog::exec(
+        repo_root,
+        &ToolsRunRequest {
+            repo_root: Some(repo_root.to_string()),
+            tool_id,
+            args: Some(args),
+            dry_run: Some(dry_run),
+            response_mode: None,
+        },
+    )
+    .await
 }
 
 pub fn validate(

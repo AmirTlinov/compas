@@ -153,6 +153,13 @@ Recovery guidance:
 - Treat plugins as **policy and evidence**, not as “nice-to-have tooling”.
 - Keep `ci_fast` lean: fast gates reduce agent “try random things” behavior.
 - Keep slow tools in `ci`/`flagship` or scheduled jobs; use compas `impact rules` to avoid wasting time.
+- Keep merge-readiness as an exec-only proof step. The canonical path is:
+  - worker: `compas.gate <lane> --write-witness`
+  - reviewer/audit: emit canonical review artifacts under `.agents/mcp/compas/reviews/`
+  - merge truth: `compas.exec merge-truth-check -- --profile <ci|flagship>`
+- `merge-truth-check` is intentionally **not** another gate and should not be wired into
+  `gate.ci` / `gate.flagship`; it composes the existing witness and review evidence after those
+  proof steps have already completed.
 - Use `compas.init --apply --profile ai_first` when the repo should expose the canonical
   AI-first scaffold; registry recommendations may then match explicit repo signals without
   mutating install policy automatically.
